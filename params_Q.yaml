@@ -1,0 +1,56 @@
+###########################
+### Experiment Settings ###
+###########################
+# Logging to 'stdout' (good for testing) or 'file' (good for reproduce)
+log_type: file
+# Type of experiment to run
+type: Q
+# Seed for random number generator
+random_seed: 123
+# Number of repetitions of an experiment
+runs: 10
+# Number of training episodes within an experiment
+episodes: 1000
+# Maximum number of steps in one episode
+max_steps: 100
+# Number of episodes between testing episodes
+test_interval: 100
+# to evaluate the current performance count steps for these
+# starting positions
+test_positions:
+    - [1, 1]
+    - [7, 1]
+    - [1, 11]
+    - [3, 17]
+    - [9, 11]
+    - [20, 5]
+    - [12, 9]
+    - [21, 19]
+    - [12, 15]
+    - [22, 3]
+# describe tasks by name and goal position
+tasks:
+    - name: omega
+      goal_pos: [18, 1]
+    - name: omega1
+      goal_pos: [15, 2]
+#    - name: omega2
+#      goal_pos: [3, 2]
+#    - name: omega3
+#      goal_pos: [3, 18]
+#    - name: omega4
+#      goal_pos: [20, 18]
+#    - name: omega5
+#      goal_pos: [20, 2]
+############################
+### Environment Settings ###
+############################
+grid: PolicyReuse2006
+visual: True
+#########################
+### Learning Settings ###
+#########################
+epsilon: 1.0
+epsilon_change: -0.0005
+alpha: 0.05
+gamma: 0.95

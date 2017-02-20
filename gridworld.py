@@ -7,7 +7,6 @@ from PIL import Image
 from PIL import ImageDraw
 # others
 import os
-import random
 import cv2
 import glob
 import numpy as np
@@ -22,18 +21,22 @@ green = (0, 128, 0)  # agents
 
 
 class Gridworld(object):
-    def __init__(self, task_map, cell_width=10, cell_height=10,
+    def __init__(self, grid, cell_width=10, cell_height=10,
                  uncertainty=0.2, step_size=1, step_penalty=0,
-                 max_steps=100, visual=False):
+                 max_steps=100, visual=False, rng=np.random.RandomState(1)):
+        self.rng = rng
         # create the image object for learning only if necessary
         self.visual = visual
-        self.lines = [line.rstrip() for line in open(task_map)]
+        self.lines = [line.rstrip() for line in open(grid)]
         # Initialize objects and possible states
         self.agents = {}
         self.goals = {}
         self.all_states = self.lookup_states()
         # set possible actions
-        self.actions = ['west', 'east', 'north', 'south']
+        self.actions = ['west',  # 0: left
+                        'east',  # 1: right
+                        'north',  # 2: up
+                        'south']  # 3: down
         # environment settings
         self.step_size = step_size
         self.step_penalty = step_penalty
@@ -124,15 +127,15 @@ class Gridworld(object):
             row += 1
         return possible_states
 
-    def add_goal(self, pos_x, pos_y, name='goal', reward=1.0):
-        # self.goal[name] = [pos_y, pos_x, reward]
-        self.goals[(pos_x, pos_y)] = (reward, name)
+    def add_goal(self, pos, name='goal', reward=1.0):
+        self.goals[pos] = (reward, name)
 
-    def add_agent(self, pos_x, pos_y, name='agent'):
-        self.agents[name] = [pos_x, pos_y]
+    def add_agent(self, pos, name='agent'):
+        self.agents[name] = [pos[0], pos[1]]
 
     def get_random_state(self):
-        return random.choice(self.all_states)
+        return self.all_states[
+                self.rng.random_integers(0, len(self.all_states) - 1)]
 
     def run_episode(self, directory='test'):
         """
@@ -141,9 +144,7 @@ class Gridworld(object):
         self.reset_env()
         self.draw_frame()
         self.save_current_frame(directory)
-        # self.get_current_frame()
-        # step_possible = False
-        action_id = random.randint(0, len(self.actions) - 1)
+        action_id = self.rng.random_integers(0, self.action_count - 1)
         reward = self.step(self.actions[action_id])
         self.draw_frame()
         self.save_current_frame(directory)
@@ -153,9 +154,7 @@ class Gridworld(object):
                                                     str(reward)))
         '''
         while not self.episode_ended:
-            # self.update_state()
-            # self.get_current_frame()
-            action_id = random.randint(0, len(self.actions) - 1)
+            action_id = self.rng.random_integers(0, self.action_count - 1)
             reward = self.step(self.actions[action_id])
             self.draw_frame()
             self.save_current_frame(directory)
@@ -165,6 +164,8 @@ class Gridworld(object):
                                   self.actions[action_id],
                                   str(reward)))
             '''
+            if reward == 0.0:
+                pass
             if self.step_count >= self.max_steps:
                 self.episode_ended = True
         if self.visual:
@@ -174,6 +175,8 @@ class Gridworld(object):
         self.step_count = 0
         self.episode_ended = False
         self.goal_reached = False
+        self.goals = {}
+        self.agents = {}
         self.reached_goal_name = None
         self.reward_current = 0
         self.reward_total = 0
@@ -186,29 +189,54 @@ class Gridworld(object):
         """
         self.step_count += 1
         step = self.step_size + self.get_slip()
+        can_move = True
         if action == 'west':
-            if (int(self.agents[agent][0] - step),
-                    int(self.agents[agent][1])) in self.all_states:
+            for x in range(int(self.agents[agent][0] - step),
+                           int(self.agents[agent][0]) + 1):
+                try:
+                    if self.lines[int(self.agents[agent][1])][x] == '-':
+                        can_move = False
+                except IndexError:
+                    can_move = False
+            if can_move:
                 self.agents[agent][0] -= step
         if action == 'east':
-            if (int(self.agents[agent][0] + step),
-                    int(self.agents[agent][1])) in self.all_states:
+            for x in range(int(self.agents[agent][0]),
+                           int(self.agents[agent][0] + step) + 1):
+                try:
+                    if self.lines[int(self.agents[agent][1])][x] == '-':
+                        can_move = False
+                except IndexError:
+                    can_move = False
+            if can_move:
                 self.agents[agent][0] += step
         if action == 'north':
-            if (int(self.agents[agent][0]),
-                    int(self.agents[agent][1] - step)) in self.all_states:
+            for y in range(int(self.agents[agent][1] - step),
+                           int(self.agents[agent][1]) + 1):
+                try:
+                    if self.lines[y][int(self.agents[agent][0])] == '-':
+                        can_move = False
+                except IndexError:
+                    can_move = False
+            if can_move:
                 self.agents[agent][1] -= step
         if action == 'south':
-            if (int(self.agents[agent][0]),
-                    int(self.agents[agent][1] + step)) in self.all_states:
+            for y in range(int(self.agents[agent][1]),
+                           int(self.agents[agent][1] + step) + 1):
+                try:
+                    if self.lines[y][int(self.agents[agent][0])] == '-':
+                        can_move = False
+                except IndexError:
+                    can_move = False
+            if can_move:
                 self.agents[agent][1] += step
         self.reward_current = self.get_reward_current()
         self.reward_total += self.reward_current
         return self.reward_current
 
     def get_slip(self):
-        return random.uniform(-1 * self.step_uncertainty,
-                              self.step_uncertainty)
+        return self.rng.uniform(-1 * self.step_uncertainty,
+                                self.step_uncertainty)
 
     def get_reward_current(self):
         for agent_name, agent_values in self.agents.items():
@@ -232,11 +260,11 @@ class Gridworld(object):
         self.image_frame.save(os.path.join(directory, name))
 
     def get_current_state(self, agent):
-        if self.visual:
-            return (int(self.agents[agent][0]), int(self.agents[agent][1]),
-                    np.asarray(self.image_frame))
-        else:
-            return (int(self.agents[agent][0]), int(self.agents[agent][1]))
+        # if self.visual:
+        #    return (int(self.agents[agent][0]), int(self.agents[agent][1]),
+        #            np.asarray(self.image_frame))
+        # else:
+        return (int(self.agents[agent][0]), int(self.agents[agent][1]))
 
     def get_all_states(self):
         return self.all_states
@@ -245,15 +273,15 @@ class Gridworld(object):
         Some helper functions to better use the environment.
     """
 
-    def make_video(self, directory):
+    def make_video(self, path_to_dir):
         # find all images files
-        frames = glob.glob(os.path.join(directory) + '/*.png')
+        frames = glob.glob(os.path.join(path_to_dir) + '/*.png')
         start_frame = cv2.imread(frames[0])
         # get image data
         video_height, video_width, layers = start_frame.shape
         # open video object
         fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-        video = cv2.VideoWriter(os.path.join(directory, 'video.avi'),
+        video = cv2.VideoWriter(os.path.join(path_to_dir, 'video.avi'),
                                 fourcc,
                                 6,
                                 (video_width, video_height))
@@ -270,8 +298,8 @@ class Gridworld(object):
 
 if __name__ == "__main__":
     env = Gridworld('./maps/PolicyReuse2006', visual=True)
-    env.add_agent(3, 3)
-    env.add_goal(1, 1)
+    env.add_agent((3, 3))
+    env.add_goal((1, 1))
     env.run_episode()
 
 
