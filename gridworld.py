@@ -16,8 +16,11 @@ white = (255, 255, 255)  # room
 yellow = (255, 255, 0)  # corridor
 black = (0, 0, 0)  # walls
 blue = (0, 0, 255)  # doors
-red = (255, 0, 0)  # goals
-green = (0, 128, 0)  # agents
+red = (255, 0, 0)  # death
+green = (0, 128, 0)  #
+blue_light = (0, 191, 255)  # door
+green_light = (0, 255, 0)  # reward
+yellow_light = (255, 255, 224)  # corridor
 
 
 class Gridworld(object):
@@ -83,13 +86,13 @@ class Gridworld(object):
                     self.image.rectangle([x1, y1, x2, y2], black)
                 if symbol == "r":
                     # self.image.rectangle([x1, y1, x2, y2], white)
-                    self.image.rectangle([x1, y1, x2, y2], yellow)
+                    self.image.rectangle([x1, y1, x2, y2], yellow_light)
                 if symbol == "c":
                     # self.image.rectangle([x1, y1, x2, y2], yellow)
                     self.image.rectangle([x1, y1, x2, y2], white)
                 if symbol == "d":
-                    self.image.rectangle([x1, y1, x2, y2], blue)
-                    # self.image.rectangle([x1, y1, x2, y2], white)
+                    self.image.rectangle([x1, y1, x2, y2], blue_light)
+                    #self.image.rectangle([x1, y1, x2, y2], white)
             row += 1
 
     def draw_agents(self):
@@ -98,7 +101,8 @@ class Gridworld(object):
             y1 = int(agent_coords[1]) * self.cell_height
             x2 = x1 + self.cell_width
             y2 = y1 + self.cell_height
-            self.image.ellipse([x1, y1, x2, y2], green)
+            #self.image.ellipse([x1, y1, x2, y2], blue_light)
+            self.image.ellipse([x1, y1, x2, y2], white)
 
     def draw_goals(self):
         for goal_coords, goal_values in self.goals.items():
@@ -109,7 +113,7 @@ class Gridworld(object):
             if goal_values[0] < 0:
                 self.image.rectangle([x1, y1, x2, y2], red)
             else:
-                self.image.rectangle([x1, y1, x2, y2], green)
+                self.image.rectangle([x1, y1, x2, y2], green_light)
 
     """
         Funktions to control the environment.

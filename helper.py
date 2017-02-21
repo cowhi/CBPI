@@ -90,7 +90,8 @@ def summarize_runs(path_to_dir):
             mean_confidence_interval(steps[episode][1])
         reward_mean, reward_lower, reward_upper = \
             mean_confidence_interval(reward[episode][1])
-        summary.append([steps[episode][0], step_mean, step_lower, step_upper,
+        summary.append([int(steps[episode][0]), step_mean,
+                        step_lower, step_upper,
                         reward_mean, reward_lower, reward_upper])
     header = ['episode', 'steps_mean', 'steps_lower', 'steps_upper',
               'reward_mean', 'reward_lower', 'reward_upper']

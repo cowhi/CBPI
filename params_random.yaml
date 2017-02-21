@@ -8,13 +8,13 @@ type: Q
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of an experiment
-runs: 10
+runs: 1
 # Number of training episodes within an experiment
-episodes: 1000
+episodes: 1
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes
-test_interval: 100
+test_interval: 1
 # to evaluate the current performance count steps for these
 # starting positions
 test_positions:
