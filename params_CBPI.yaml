@@ -3,6 +3,8 @@
 ###########################
 # Logging to 'stdout' (good for testing) or 'file' (good for reproduce)
 log_type: file
+# Level logging output ('DEBUG', 'INFO', etc.)
+log_level: INFO
 # Type of experiment to run
 type: Q
 # Seed for random number generator
@@ -10,13 +12,21 @@ random_seed: 123
 # Number of repetitions of an experiment
 runs: 10
 # Number of training episodes within an experiment
-episodes: 1000
+episodes: 2000
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes
-test_interval: 50
-# Number of episodes between testing episodes
-compare_interval: 100
+test_interval: 10
+# Number of episodes between policy evaluations during training
+policy_eval_interval: 10
+# Number of tests to evaluate policy
+policy_eval_episodes: 10
+# Factor to determine similarity (closeness) as percentage of map diagonal
+policy_eval_factor: 0.3
+# temperature factor for action probabillities with softmax
+tau_action: 0.01
+# temperature factor for policy probabillities with softmax
+tau_policy: 0.1
 # to evaluate the current performance count steps for these
 # starting positions
 test_positions:
@@ -32,8 +42,6 @@ test_positions:
     - [22, 3]
 # describe tasks by name and goal position
 tasks:
-    - name: omega
-      goal_pos: [18, 1]
     - name: omega1
       goal_pos: [15, 2]
     - name: omega2
@@ -44,11 +52,13 @@ tasks:
       goal_pos: [20, 18]
     - name: omega5
       goal_pos: [20, 2]
+    - name: omega
+      goal_pos: [18, 1]
 ############################
 ### Environment Settings ###
 ############################
 grid: PolicyReuse2006
-visual: True
+visual: False
 #########################
 ### Learning Settings ###
 #########################

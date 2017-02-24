@@ -1,18 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys
 import os
-import numpy as np
-import time
-from ruamel import yaml
+import math
+from experiment import Experiment
+from learner_CBPI import LearnerCBPI
 import helper
-from gridworld import Gridworld
-from learner_Q import LearnerQ
+import numpy as np
 import logging
 _logger = logging.getLogger(__name__)
 
 
-class Experiment(object):
+class ExperimentCBPI(Experiment):
     """ This is the base class for all experiment implementations.
 
     The experiment organizes all objects and directs the training in a given
@@ -24,226 +22,159 @@ class Experiment(object):
         """ Initializes an experiment.
 
         """
-        self.params = self.get_parameter(params_file)
-        self.exp_dir = self.set_exp_dir()
-        _logger = self.set_logger()
-        _logger.info("Initializing new experiment of type %s" %
-                     str(self.params['type']))
-        _logger.info("Loading parameters from %s" % str(params_file))
-        _logger.info("Saving logs in %s" % str(self.exp_dir))
-        # copy parameter source
-        helper.copy_file(params_file,
-                         os.path.join(self.exp_dir, 'params.yaml'))
-        # Mersenne Twister pseudo-random number generator
-        self.rng = np.random.RandomState(self.params['random_seed'])
-        # set environment
-        self.env = Gridworld(grid=os.path.join(os.getcwd(),
-                                               'maps',
-                                               self.params['grid']),
-                             max_steps=self.params['max_steps'],
-                             visual=self.params['visual'],
-                             rng=self.rng)
-        self.learner = LearnerQ(action_count=len(self.env.actions),
-                                epsilon=self.params['epsilon'],
-                                gamma=self.params['gamma'],
-                                alpha=self.params['alpha'],
-                                rng=self.rng)
+        super(ExperimentCBPI, self).__init__(params_file)
+        self.learner = LearnerCBPI(action_count=len(self.env.actions),
+                                   epsilon=self.params['epsilon'],
+                                   gamma=self.params['gamma'],
+                                   alpha=self.params['alpha'],
+                                   rng=self.rng)
         self.learner.init_Q(states=self.env.get_all_states(), how='zero')
         self.agent_name = 'agent'
-        self.status = 'idle'
-        _logger.debug("Current status is %s" % str(self.status))
-        # policy library ("name": goal_pos, Q, task_similarity)
-        self.library_all = {}
-        # policy library ("name": Q, policy_suitability)
-        self.library_current = {}
+        self.map_size = self.env.get_map_size()
+        self.map_diagonal = math.sqrt(self.map_size[0]**2 +
+                                      self.map_size[1]**2)
+        self.library = {}
+        self.task_library = {}
+        self.current_library = {}
+        self.set_status('idle')
 
-    def get_parameter(self, file_name):
-        path_to_file = os.path.join(os.getcwd(), file_name)
-        with open(path_to_file, 'r') as ymlfile:
-            params = yaml.load(ymlfile, Loader=yaml.Loader)
-        # print(params)
-        return params
+    def init_run_exp(self, task_name):
+        self.learner.init_Q(states=self.env.get_all_states(),
+                            how='zero')
 
-    def set_exp_dir(self):
-        folder = "%s_%s_%s" % (str(time.strftime("%Y-%m-%d_%H-%M")),
-                               str(self.params['type']).lower(),
-                               str(self.params['grid']).lower())
-        path_to_dir = os.path.join(os.getcwd(), 'logs', folder)
-        return helper.create_dir(path_to_dir)
-
-    def set_logger(self):
-        # make sure no loggers are already active
-        try:
-            logging.root.handlers.pop()
-        except IndexError:
-            # if no logger exist the list will be empty and we need
-            # to catch the resulting error
-            pass
-        if self.params['log_type'] == 'stdout':
-            logging.basicConfig(level=getattr(logging, 'INFO', None),
-                                stream=sys.stdout,
-                                format='[%(asctime)s][%(levelname)s]'
-                                       '[%(module)s][%(funcName)s] '
-                                       '%(message)s')
+        if task_name == 'omega':
+            self.learner.set_epsilon(0.2)
+            self.learner.set_epsilon(0.2)
         else:
-            logging.basicConfig(level=getattr(logging, 'INFO', None),
-                                format='[%(asctime)s][%(levelname)s]'
-                                       '[%(module)s][%(funcName)s] '
-                                       '%(message)s',
-                                filename=os.path.join(self.exp_dir,
-                                                      'experiment.log'),
-                                filemode='w')
-        return logging.getLogger(__name__)
+            self.learner.set_epsilon(self.params['epsilon'])
+            self.learner.set_epsilon(self.params['epsilon'])
+        self.run_lib_file = os.path.join(self.run_dir,
+                                         'stats_libs.csv')
+        temp = self.task_policies
+        temp.insert(0, 'episode')
+        helper.write_stats_file(self.run_lib_file,
+                                temp)
+        self.evaluate_current_library(0)
 
-    def run_episode(self, agent_pos, goal_pos):
-        """
-            Function to run a single episode
-        """
-        self.env.reset_env()
-        self.env.add_agent(agent_pos, self.agent_name)
-        self.env.add_goal(goal_pos)
-        if self.status == 'recording':
-            self.env.draw_frame()
-            self.env.save_current_frame(self.episode_dir)
-        state = self.env.get_current_state(self.agent_name)
-        action_id = self.learner.get_action(state, self.library_current)
-        reward = self.env.step(self.env.actions[action_id],
-                               self.agent_name)
-        state_prime = self.env.get_current_state(self.agent_name)
-        if self.status == 'testing':
-            self.steps_in_episode += 1
-            self.reward_in_episode += reward
-        if self.status == 'training':
-            self.learner.update_Q(state[0:2], action_id,
-                                  reward, state_prime[0:2])
-        if self.status == 'recording':
-            self.env.draw_frame()
-            self.env.save_current_frame(self.episode_dir)
-        while not self.env.episode_ended:
-            state = state_prime
-            action_id = self.learner.get_action(state, self.library_current)
-            reward = self.env.step(self.env.actions[action_id],
-                                   self.agent_name)
-            state_prime = self.env.get_current_state(self.agent_name)
-            if self.status == 'testing':
-                self.steps_in_episode += 1
-                self.reward_in_episode += reward
-            if self.status == 'training':
-                self.learner.update_Q(state[0:2], action_id,
-                                      reward, state_prime[0:2])
-            if self.status == 'recording':
-                self.env.draw_frame()
-                self.env.save_current_frame(self.episode_dir)
-            if self.env.step_count >= self.env.max_steps:
-                self.env.episode_ended = True
-        if self.env.visual and self.status == 'recording':
-            self.env.make_video(self.episode_dir)
+    def init_task_exp(self, task_name):
+        # TODO: reset learner
+        self.init_library(task_name)
+        self.build_task_library(task_name)
 
-    def init_episode(self):
-        self.steps_in_episode = 0
-        self.reward_in_episode = 0
+    def cleanup_task_exp(self, name):
+        self.update_library(name)
+        self.current_library = {}
+        # TODO: get policy probability distribution from best run and plot!
 
-    def init_task(self, name):
-        # create task directory
-        task_dir = os.path.join(self.exp_dir, 'task_' + name)
-        self.task_dir = helper.create_dir(task_dir)
-        # TODO: build library_current from library
-        _logger.info("Starting task %s" % str(name))
+    def cleanup_run_exp(self, path_to_dir):
+        helper.plot_stats_libs(path_to_dir)
 
-    def init_run(self):
+    def init_library(self, task_name):
+        task_index = next(index
+                          for (index, d) in enumerate(self.params['tasks'])
+                          if d['name'] == task_name)
+        self.library.setdefault(task_name, {})['goal_pos'] = \
+            self.params['tasks'][task_index]['goal_pos']
+        self.library.setdefault(task_name, {})['Q'] = self.learner.Q
+        self.library.setdefault(task_name, {})['importance'] = 0.0
 
-    def run(self):
-        for task in self.params['tasks']:
-            self.init_task(task['name'])
-            for run in range(1, self.params['runs'] + 1):
-                run_dir = os.path.join(self.task_dir, 'run_' + str(run))
-                self.run_dir = helper.create_dir(run_dir)
-                # Create run stats file: run_stats.csv
-                self.run_stats_file = os.path.join(self.run_dir,
-                                                   'stats_run.csv')
-                helper.write_stats_file(self.run_stats_file,
-                                        'episode',
-                                        'steps_total', 'steps_mean',
-                                        'reward_total', 'reward_mean',
-                                        'epsilon')
-                self.learner.init_Q(states=self.env.get_all_states(),
-                                    how='zero')
-                self.learner.set_epsilon(self.params['epsilon'])
-                self.learner.set_epsilon(self.params['epsilon'])
-                self.run_tests(0, task)
-                _logger.info("..... run %s" % str(run))
-                self.status = 'training'
-                _logger.debug("Current status is %s" % str(self.status))
-                for episode in range(1, self.params['episodes'] + 1):
-                    self.run_episode(self.env.get_random_state(),
-                                     tuple(task['goal_pos']))
-                    if episode % self.params['test_interval'] == 0:
-                        self.run_tests(episode, task)
-                    if self.learner.epsilon > -1 * self.learner.epsilon_change:
-                        self.learner.set_epsilon(self.learner.epsilon +
-                                                 self.learner.epsilon_change)
-                # TODO: Save best Q-table for current run
-                helper.plot_run(self.run_dir)
-            helper.plot_runs(self.task_dir)
-            helper.summarize_runs(self.task_dir)
-            helper.plot_task(self.task_dir)
-            # TODO: Save best Q-table for current task
-            self.status = 'idle'
-            _logger.debug("Current status is %s" % str(self.status))
-        self.status = 'done'
-        _logger.debug("Current status is %s" % str(self.status))
+    def build_task_library(self, task_name):
+        # evaluate task similarity using euclidean goal distance
+        # TODO: turn results around so closest is most similar
+        if task_name == 'omega':
+            task_index = next(index
+                              for (index, d) in enumerate(self.params['tasks'])
+                              if d['name'] == task_name)
+            self.task_policies = []
+            for library_name in self.library:
+                x = self.library[library_name]['goal_pos'][0] - \
+                    self.params['tasks'][task_index]['goal_pos'][0]
+                y = self.library[library_name]['goal_pos'][1] - \
+                    self.params['tasks'][task_index]['goal_pos'][1]
+                distance = math.sqrt(x**2 + y**2)
+                max_distance = \
+                    self.params['policy_eval_factor'] * self.map_diagonal
+                _logger.debug("%s: distance_to_%s %s <= map_diagonal %s" %
+                              (library_name, task_name,
+                               str(distance), str(max_distance)))
+                if distance < max_distance:
+                    self.current_library[library_name] = \
+                        self.library[library_name]
+                    self.current_library[library_name]['weight'] = 0.0
+                    self.task_policies.append(library_name)
+        else:
+            self.current_library[task_name] = self.library[task_name]
+            self.current_library[task_name]['weight'] = 0.0
+            self.task_policies = [task_name]
+        self.task_library = self.current_library
+        _logger.info("Start training %s with %s" %
+                     (str(task_name), str(self.task_policies)))
 
-    def run_tests(self, episode, task):
-        # TODO: update epsilon
-        self.learner.set_epsilon(0.0)
-        self.status = 'testing'
-        _logger.debug("Current status is %s" % str(self.status))
-        self.episode_dir = os.path.join(self.run_dir,
-                                        'episode_' + str(episode))
-        self.episode_dir = helper.create_dir(self.episode_dir)
+    def evaluate_current_library(self, episode):
+        self.set_status('policy_eval')
+        divider = 0.0
+        for library_name in self.current_library:
+            policy_results_mean = self.get_mean(
+                self.current_library[library_name]['Q'],
+                self.current_library[library_name]['goal_pos'])
+            _logger.debug("%s: results_mean = %s" %
+                          (library_name,
+                           str(policy_results_mean)))
+            self.current_library[library_name]['weight'] = \
+                np.exp(-1.0 * (policy_results_mean /
+                       self.params['tau_policy']) /
+                       (self.params['policy_eval_episodes'] *
+                       len(self.params['test_positions'])))
+            divider += self.current_library[library_name]['weight']
+        weights = [episode]
+        for library_name in self.current_library:
+            self.current_library[library_name]['weight'] /= divider
+            # self.current_library[library_name]['weight'] = \
+            #    1 - self.current_library[library_name]['weight']
+            # TODO: Be careful! Not ordered!!!
+            weights.append(self.current_library[library_name]['weight'])
+            _logger.debug("%s: weight = %s" %
+                          (library_name,
+                           str(self.current_library[library_name]['weight'])))
+            # TODO: save weights for plotting
+            # 'episode', 'name1', 'name2', ...
+            # 0, 0.2, 0.3,
+        helper.write_stats_file(self.run_lib_file,
+                                weights)
+        self.set_status('training')
+
+    def update_library(self, task_name):
+        # TODO: library compare policies using score on final policy minus
+        # threshold
+        similar = True
+        if not similar:
+            # remove current task from library
+            del self.library[task_name]
+
+    def get_mean(self, policy, goal_pos):
+        policy_results = []
+        for i in range(0, self.params['policy_eval_episodes']):
+            reward_mean = self.run_policy_evals(policy, goal_pos)
+            policy_results.append(reward_mean)
+        return np.mean(policy_results)
+
+    def run_policy_evals(self, policy, goal_pos):
         self.test_steps = []
         self.test_rewards = []
         for test_pos in self.params['test_positions']:
             self.init_episode()
             self.run_episode(test_pos,
-                             tuple(task['goal_pos']))
+                             tuple(goal_pos),
+                             policy)
             self.test_steps.append(self.steps_in_episode)
             self.test_rewards.append(self.reward_in_episode)
-        helper.write_stats_file(self.run_stats_file,
-                                episode,
-                                sum(self.test_steps),
-                                np.mean(self.test_steps),
-                                sum(self.test_rewards),
-                                np.mean(self.test_rewards),
-                                float("{0:.5f}"
-                                      .format(self.learner.last_epsilon)))
-        self.learner.save_Qs(os.path.join(self.episode_dir,
-                                          'Qs.npy'))
-        # Make video from random position
-        if self.params['visual']:
-            self.status = 'recording'
-            _logger.debug("Current status is %s" % str(self.status))
-            self.run_episode(self.env.get_random_state(),
-                             tuple(task['goal_pos']))
-        self.learner.set_epsilon(self.learner.last_epsilon)
-        self.status = 'training'
-        _logger.debug("Current status is %s" % str(self.status))
+        _logger.debug("total_test_steps = %s" %
+                      (str(self.test_steps)))
+        return np.mean(self.test_steps)
 
-        def compare_policies(self):
-            # TODO: calculate policy_suitability for current task
-            pass
-
-        def select_policies(self):
-            # TODO: calculate current task_similarity to select policy for current
-            pass
-
-        def update_library(self):
-            # TODO: library compare policies
-            # TODO: library add
-            pass
 
 if __name__ == "__main__":
     params_file = os.path.join(os.getcwd(),
-                               'params_Q.yaml')
-    exp = Experiment(params_file)
-    exp.run()
+                               'params_CBPI.yaml')
+    exp = ExperimentCBPI(params_file)
+    exp.main()

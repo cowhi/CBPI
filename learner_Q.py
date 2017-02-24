@@ -63,9 +63,9 @@ class LearnerQ(object):
                 Qs.append(0.0)
         return max(Qs)
 
-    def get_action(self, state, reuse=False):
+    def get_action(self, state, *args):
         explore_propability = self.rng.uniform(0, 1)
-        if explore_propability < self.epsilon and not reuse:
+        if explore_propability < self.epsilon:
             return self.rng.random_integers(0, self.action_count - 1)
         else:
             Qs = []

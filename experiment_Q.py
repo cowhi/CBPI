@@ -29,16 +29,19 @@ class ExperimentQ(Experiment):
         self.agent_name = 'agent'
         self.set_status('idle')
 
-    def init_run_exp(self):
+    def init_run_exp(self, name):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
         self.learner.set_epsilon(self.params['epsilon'])
         self.learner.set_epsilon(self.params['epsilon'])
 
-    def init_task_exp(self):
+    def init_task_exp(self, name):
         pass
 
-    def cleanup_task_exp(self):
+    def cleanup_task_exp(self, name):
+        pass
+
+    def cleanup_run_exp(self, name):
         pass
 
 

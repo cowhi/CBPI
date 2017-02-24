@@ -31,6 +31,8 @@ class Gridworld(object):
         # create the image object for learning only if necessary
         self.visual = visual
         self.lines = [line.rstrip() for line in open(grid)]
+        self.row_count = len(self.lines)
+        self.column_count = len(self.lines[0])
         # Initialize objects and possible states
         self.agents = {}
         self.goals = {}
@@ -53,8 +55,6 @@ class Gridworld(object):
             # set all map information
             self.cell_width = cell_width
             self.cell_height = cell_height
-            self.row_count = len(self.lines)
-            self.column_count = len(self.lines[0])
             self.map_width = self.column_count * self.cell_width
             self.map_height = self.row_count * self.cell_height
             self.visual = visual
@@ -91,8 +91,8 @@ class Gridworld(object):
                     # self.image.rectangle([x1, y1, x2, y2], yellow)
                     self.image.rectangle([x1, y1, x2, y2], white)
                 if symbol == "d":
-                    self.image.rectangle([x1, y1, x2, y2], blue_light)
-                    #self.image.rectangle([x1, y1, x2, y2], white)
+                    # self.image.rectangle([x1, y1, x2, y2], blue_light)
+                    self.image.rectangle([x1, y1, x2, y2], white)
             row += 1
 
     def draw_agents(self):
@@ -101,7 +101,7 @@ class Gridworld(object):
             y1 = int(agent_coords[1]) * self.cell_height
             x2 = x1 + self.cell_width
             y2 = y1 + self.cell_height
-            #self.image.ellipse([x1, y1, x2, y2], blue_light)
+            # self.image.ellipse([x1, y1, x2, y2], blue_light)
             self.image.ellipse([x1, y1, x2, y2], white)
 
     def draw_goals(self):
@@ -272,6 +272,9 @@ class Gridworld(object):
 
     def get_all_states(self):
         return self.all_states
+
+    def get_map_size(self):
+        return (self.row_count, self.column_count)
 
     """
         Some helper functions to better use the environment.

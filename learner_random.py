@@ -11,7 +11,7 @@ class LearnerRandom(object):
         self.epsilon = 0
         self.epsilon_change = 0
 
-    def get_action(self, state):
+    def get_action(self, state, *args):
         return self.rng.random_integers(0, self.action_count - 1)
 
     def set_epsilon(self, epsilon):

@@ -45,7 +45,11 @@ def write_stats_file(path_to_file, *args):
     # creating new line for file
     line = ''
     for arg in args:
-        line += str(arg) + ','
+        if type(arg) is list:
+            for elem in arg:
+                line += str(elem) + ','
+        else:
+            line += str(arg) + ','
     line = line[:-1] + '\n'
     # write to file
     try:
@@ -165,3 +169,14 @@ def plot_task(path_to_dir):
         plt.legend(fontsize=14)
         plt.savefig(os.path.join(path_to_dir, 'plot_' + str(factor) + '.png'))
         plt.close('all')
+
+
+def plot_stats_libs(path_to_dir):
+    df = pd.read_csv(os.path.join(path_to_dir, 'stats_libs.csv'))
+    plt.figure(figsize=(10, 6), dpi=80)
+    df.plot(x='episode')
+    plt.ylabel('policy probability [%]', fontsize=20, fontweight='bold')
+    plt.xlabel('episodes', fontsize=20, fontweight='bold')
+    plt.legend(fontsize=14)
+    plt.savefig(os.path.join(path_to_dir, 'plot_stats_libs.png'))
+    plt.close('all')

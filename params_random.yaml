@@ -3,6 +3,8 @@
 ###########################
 # Logging to 'stdout' (good for testing) or 'file' (good for reproduce)
 log_type: file
+# Level logging output ('DEBUG', 'INFO', etc.)
+log_level: DEBUG
 # Type of experiment to run
 type: Q
 # Seed for random number generator
