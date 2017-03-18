@@ -2,31 +2,39 @@
 ### Experiment Settings ###
 ###########################
 # Logging to 'stdout' (good for testing) or 'file' (good for reproduce)
-log_type: file
+log_type: stdout
 # Level logging output ('DEBUG', 'INFO', etc.)
-log_level: INFO
+log_level: DEBUG
 # Type of experiment to run
-type: Q
+type: CBPI
 # Seed for random number generator
 random_seed: 123
-# Number of repetitions of an experiment
-runs: 10
+# Number of repetitions of an experiment (50)
+runs: 3
 # Number of training episodes within an experiment
-episodes: 2000
+episodes: 1000
 # Maximum number of steps in one episode
 max_steps: 100
-# Number of episodes between testing episodes
+# Number of episodes between testing episodes (1)
 test_interval: 10
-# Number of episodes between policy evaluations during training
+# Number of episodes between policy evaluations during training (10)
 policy_eval_interval: 10
-# Number of tests to evaluate policy
-policy_eval_episodes: 10
+# Number of tests to evaluate policy (100)
+policy_eval_episodes: 100
 # Factor to determine similarity (closeness) as percentage of map diagonal
 policy_eval_factor: 0.3
+# interval when the policy with the lowest policy probability is cut
+policy_eliminate_interval: 1000
+# at which probability do we start not using a certain policy anymore
+policy_importance_limit: 0.1
+# max policies for current task
+task_library_size: 5
 # temperature factor for action probabillities with softmax
 tau_action: 0.01
 # temperature factor for policy probabillities with softmax
 tau_policy: 0.1
+# temperature factor for policy probabillities with softmax
+tau_policy_change: 0.005
 # to evaluate the current performance count steps for these
 # starting positions
 test_positions:
@@ -42,18 +50,27 @@ test_positions:
     - [22, 3]
 # describe tasks by name and goal position
 tasks:
-    - name: omega1
-      goal_pos: [15, 2]
-    - name: omega2
-      goal_pos: [3, 2]
-    - name: omega3
-      goal_pos: [3, 18]
-    - name: omega4
-      goal_pos: [20, 18]
-    - name: omega5
-      goal_pos: [20, 2]
     - name: omega
       goal_pos: [18, 1]
+# will we use pretrained policies
+load_policies: True
+# where are those policies
+learned_policies:
+    - name: omega1
+      goal_pos: [15, 2]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-15_20-37_q_policyreuse2006/task_omega1/
+    - name: omega2
+      goal_pos: [3, 2]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-15_20-37_q_policyreuse2006/task_omega2/
+    - name: omega3
+      goal_pos: [3, 18]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-15_20-37_q_policyreuse2006/task_omega3/
+    - name: omega4
+      goal_pos: [20, 18]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-15_20-37_q_policyreuse2006/task_omega4/
+    - name: omega5
+      goal_pos: [20, 2]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-15_20-37_q_policyreuse2006/task_omega5/
 ############################
 ### Environment Settings ###
 ############################

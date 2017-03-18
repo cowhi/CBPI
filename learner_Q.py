@@ -1,5 +1,9 @@
 import numpy as np
 import operator
+import warnings
+import logging
+_logger = logging.getLogger(__name__)
+warnings.simplefilter("error")
 
 
 class LearnerQ(object):
@@ -39,6 +43,10 @@ class LearnerQ(object):
         return len(self.Q)
 
     def update_Q(self, state, action, reward, state_prime):
+        _logger.debug("alpha:%s, gamma:%s, V':%s, Q:%s" %
+                      (str(self.alpha), str(self.gamma),
+                       str(self.get_V(state_prime)),
+                       str(self.get_Q(state, action))))
         try:
             self.Q[state, action] += self.alpha * (reward + (self.gamma *
                                                    self.get_V(state_prime)) -
@@ -66,7 +74,8 @@ class LearnerQ(object):
     def get_action(self, state, *args):
         explore_propability = self.rng.uniform(0, 1)
         if explore_propability < self.epsilon:
-            return self.rng.random_integers(0, self.action_count - 1)
+            # return self.rng.random_integers(0, self.action_count - 1)
+            return self.rng.randint(0, self.action_count)
         else:
             Qs = []
             for action in range(0, self.action_count):
@@ -74,6 +83,8 @@ class LearnerQ(object):
                     Qs.append((action, self.Q[state, action]))
                 except KeyError:
                     pass
+            _logger.debug("Q-values in %s: ) = %s" %
+                          (str(state), str(Qs)))
             if len(Qs) > 0:
                 sorted_Qs = sorted(Qs, key=operator.itemgetter(1),
                                    reverse=True)
@@ -84,7 +95,8 @@ class LearnerQ(object):
                         max_Qs.append(sorted_Qs[i][0])
                 return self.rng.choice(max_Qs)
             else:
-                return self.rng.random_integers(0, self.action_count - 1)
+                # return self.rng.random_integers(0, self.action_count - 1)
+                return self.rng.randint(0, self.action_count)
 
     def load_Qs(self, source):
         return np.load(source).item()

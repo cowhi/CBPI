@@ -17,7 +17,6 @@ class ExperimentQ(Experiment):
 
     def __init__(self, params_file):
         """ Initializes an experiment.
-
         """
         super(ExperimentQ, self).__init__(params_file)
         self.learner = LearnerQ(action_count=len(self.env.actions),
@@ -27,9 +26,9 @@ class ExperimentQ(Experiment):
                                 rng=self.rng)
         self.learner.init_Q(states=self.env.get_all_states(), how='zero')
         self.agent_name = 'agent'
-        self.set_status('idle')
+        # self.set_s tatus('idle')
 
-    def init_run_exp(self, name):
+    def init_run_exp(self, name, run=None):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
         self.learner.set_epsilon(self.params['epsilon'])
@@ -42,11 +41,12 @@ class ExperimentQ(Experiment):
         pass
 
     def cleanup_run_exp(self, name):
-        pass
+        _logger.debug("Q-values: %s" %
+                      str(self.learner.Q))
 
 
 if __name__ == "__main__":
     params_file = os.path.join(os.getcwd(),
-                               'params_Q.yaml')
+                               'params_q.yaml')
     exp = ExperimentQ(params_file)
     exp.main()

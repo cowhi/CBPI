@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from learner_Q import LearnerQ
+import logging
+_logger = logging.getLogger(__name__)
 
 
 class LearnerCBPI(LearnerQ):
@@ -20,12 +22,9 @@ class LearnerCBPI(LearnerQ):
             action_values = []
             for action in range(0, self.action_count):
                 try:
-                    # Qs.append((action, self.Q[state, action]))
                     action_values.append(self.Q[state, action])
                 except KeyError:
-                    # Qs.append((action, 0.0))
                     action_values.append(0.0)
-
             if sum(action_values) == 0.0:
                 return self.rng.random_integers(0, self.action_count - 1)
             return np.argmax(action_values)
@@ -34,24 +33,35 @@ class LearnerCBPI(LearnerQ):
         if explore_propability < self.epsilon:
             return self.rng.random_integers(0, self.action_count - 1)
         else:
+            _logger.debug("### Selecting action ###")
             library_probs = []
             for library_name in library:
-                Qs = []
-                action_values = []
-                for action in range(0, self.action_count):
-                    try:
-                        q = library[library_name]['Q'][state, action]
-                    except KeyError:
-                        q = 0.0
-                    Qs.append((action, q))
-                    action_values.append(q)
-                # print(action_values)
-                action_probs = self.get_action_probs(action_values, tau)
-                # print(action_probs)
-                weighted_action_probs = [library[library_name]['weight'] * i
-                                         for i in action_probs]
-                # print(weighted_action_probs)
+                if library[library_name]['active']:
+                    Qs = []
+                    action_values = []
+                    for action in range(0, self.action_count):
+                        try:
+                            q = library[library_name]['Q'][state, action]
+                        except KeyError:
+                            q = 0.0
+                        Qs.append((action, q))
+                        action_values.append(q)
+                    _logger.debug("%s: action_values = %s" %
+                                  (str(library_name), str(action_values)))
+                    action_probs = self.get_action_probs(action_values, tau)
+                    _logger.debug("%s: action_probs = %s" %
+                                  (str(library_name), str(action_probs)))
+                    weighted_action_probs = \
+                        [library[library_name]['weight'] * i
+                         for i in action_probs]
+                else:
+                    weighted_action_probs = \
+                        [0.0 for action in range(0, self.action_count)]
+                #_logger.debug("%s weights: %s" %
+                #              (str(library_name), str(weighted_action_probs)))
                 library_probs.append(weighted_action_probs)
+            #_logger.debug("Library_props: %s" %
+            #              str(library_probs))
             probs = [sum(i) for i in zip(*library_probs)]
             # select action using probabillities
             if sum(probs) == 0.0:

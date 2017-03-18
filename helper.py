@@ -78,7 +78,7 @@ def mean_confidence_interval(my_list, confidence=0.95):
     return array_mean, array_mean - margin, array_mean + margin
 
 
-def summarize_runs(path_to_dir):
+def summarize_runs_results(path_to_dir):
     _logger = logging.getLogger(__name__)
     run_dirs = glob.glob(os.path.join(path_to_dir) + '/*/')
     run_files = [os.path.join(run_dir, 'stats_run.csv')
@@ -113,6 +113,40 @@ def summarize_runs(path_to_dir):
         sys.exit()
 
 
+def summarize_runs_policy_usage(path_to_dir):
+    _logger = logging.getLogger(__name__)
+    run_dirs = glob.glob(os.path.join(path_to_dir) + '/*/')
+    policy_usage_files = [os.path.join(run_dir, 'stats_policy_usage.csv')
+                          for run_dir in run_dirs]
+    df = pd.concat((pd.read_csv(policy_usage_file)
+                    for policy_usage_file in policy_usage_files))
+    policies = list(df)
+    policies = [policy for policy in policies if 'episode' not in policy]
+    for policy in policies:
+        usage = df.groupby(['episode'])[policy]
+        usage = list(usage)
+        summary = []
+        for episode in range(0, len(usage)):
+            usage_mean, usage_lower, usage_upper = \
+               mean_confidence_interval(usage[episode][1])
+            summary.append([int(usage[episode][0]),
+                            usage_mean, usage_lower, usage_upper])
+        header = ['episode', 'usage_mean', 'usage_lower', 'usage_upper']
+        try:
+            with open(os.path.join(path_to_dir,
+                                   'stats_usage_'+str(policy)+'.csv'),
+                      'w') as csvfile:
+                writer = csv.writer(csvfile,
+                                    dialect='excel',
+                                    quoting=csv.QUOTE_NONNUMERIC)
+                writer.writerow(header)
+                for data in summary:
+                    writer.writerow(data)
+        except IOError as e:
+            _logger.critical("Can't write stats file - %s " % str(e))
+            sys.exit()
+
+
 def plot_run(path_to_dir):
     df = pd.read_csv(os.path.join(path_to_dir, 'stats_run.csv'))
     # print(df)
@@ -123,7 +157,8 @@ def plot_run(path_to_dir):
         plt.ylabel(column, fontsize=20, fontweight='bold')
         plt.xlabel('episodes', fontsize=20, fontweight='bold')
         plt.legend()
-        plt.savefig(os.path.join(path_to_dir, 'plot_' + str(column) + '.png'))
+        plt.savefig(os.path.join(path_to_dir, 'plot_' + str(column) + '.png'),
+                    bbox_inches='tight')
         plt.close('all')
 
 
@@ -142,7 +177,8 @@ def plot_runs(path_to_dir):
         plt.ylabel(column, fontsize=20, fontweight='bold')
         plt.xlabel('episodes', fontsize=20, fontweight='bold')
         plt.legend()
-        plt.savefig(os.path.join(path_to_dir, 'plot_' + str(column) + '.png'))
+        plt.savefig(os.path.join(path_to_dir, 'plot_' + str(column) + '.png'),
+                    bbox_inches='tight')
         plt.close('all')
 
 
@@ -167,16 +203,53 @@ def plot_task(path_to_dir):
         plt.ylabel(factor, fontsize=20, fontweight='bold')
         plt.xlabel('episodes', fontsize=20, fontweight='bold')
         plt.legend(fontsize=14)
-        plt.savefig(os.path.join(path_to_dir, 'plot_' + str(factor) + '.png'))
+        plt.savefig(os.path.join(path_to_dir, 'plot_' + str(factor) + '.png'),
+                    bbox_inches='tight')
         plt.close('all')
 
 
-def plot_stats_libs(path_to_dir):
-    df = pd.read_csv(os.path.join(path_to_dir, 'stats_libs.csv'))
+def plot_policy_usage(path_to_dir):
+    df = pd.read_csv(os.path.join(path_to_dir, 'stats_policy_usage.csv'))
     plt.figure(figsize=(10, 6), dpi=80)
     df.plot(x='episode')
     plt.ylabel('policy probability [%]', fontsize=20, fontweight='bold')
     plt.xlabel('episodes', fontsize=20, fontweight='bold')
     plt.legend(fontsize=14)
-    plt.savefig(os.path.join(path_to_dir, 'plot_stats_libs.png'))
+    plt.savefig(os.path.join(path_to_dir, 'plot_policy_usage.png'),
+                bbox_inches='tight')
+    plt.close('all')
+
+
+def plot_policy_usage_summary(path_to_dir):
+    policy_files = glob.glob(os.path.join(path_to_dir) + '/stats_usage_*.csv')
+    colors = ['red', 'green', 'blue', 'yellow', 'black', 'brown', 'orange']
+    plt.figure(figsize=(10, 4), dpi=80)
+    color_count = 0
+    for policy_file in policy_files:
+        df = pd.read_csv(policy_file)
+        policy_name = policy_file.split('/')
+        policy_name = policy_name[-1].split('.')
+        policy_name = policy_name[0][12:]
+        plt.plot(df['episode'], df['usage_mean'],
+                 label=policy_name, color=colors[color_count], linewidth=2.0)
+        plt.plot(df['episode'], df['usage_lower'],
+                 label='_nolegend_', color=colors[color_count], linewidth=1.0)
+        plt.plot(df['episode'], df['usage_upper'],
+                 label='_nolegend_', color=colors[color_count], linewidth=1.0)
+        plt.fill_between(df['episode'], df['usage_mean'],
+                         df['usage_lower'],
+                         facecolor=colors[color_count], alpha=0.2)
+        plt.fill_between(df['episode'], df['usage_mean'],
+                         df['usage_upper'],
+                         facecolor=colors[color_count], alpha=0.2)
+        color_count += 1
+
+    plt.ylabel('policy probability [%]', fontsize=20, fontweight='bold')
+    plt.xlabel('episodes', fontsize=20, fontweight='bold')
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
+    plt.xlim(0, 1000)
+    plt.legend(fontsize=14, loc='upper left')
+    plt.savefig(os.path.join(path_to_dir, 'plot_stats_usage.png'),
+                bbox_inches='tight')
     plt.close('all')

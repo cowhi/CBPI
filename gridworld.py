@@ -25,12 +25,14 @@ yellow_light = (255, 255, 224)  # corridor
 
 class Gridworld(object):
     def __init__(self, grid, cell_width=10, cell_height=10,
-                 uncertainty=0.2, step_size=1, step_penalty=0,
+                 uncertainty=0.0, step_size=1, step_penalty=0,
                  max_steps=100, visual=False, rng=np.random.RandomState(1)):
         self.rng = rng
         # create the image object for learning only if necessary
         self.visual = visual
-        self.lines = [line.rstrip() for line in open(grid)]
+        with open(grid) as f:
+            self.lines = [line.rstrip() for line in f]
+        # self.lines = [line.rstrip() for line in open(grid)]
         self.row_count = len(self.lines)
         self.column_count = len(self.lines[0])
         # Initialize objects and possible states
@@ -101,8 +103,8 @@ class Gridworld(object):
             y1 = int(agent_coords[1]) * self.cell_height
             x2 = x1 + self.cell_width
             y2 = y1 + self.cell_height
-            # self.image.ellipse([x1, y1, x2, y2], blue_light)
-            self.image.ellipse([x1, y1, x2, y2], white)
+            self.image.ellipse([x1, y1, x2, y2], blue_light)
+            # self.image.ellipse([x1, y1, x2, y2], white)
 
     def draw_goals(self):
         for goal_coords, goal_values in self.goals.items():
@@ -137,9 +139,13 @@ class Gridworld(object):
     def add_agent(self, pos, name='agent'):
         self.agents[name] = [pos[0], pos[1]]
 
-    def get_random_state(self):
-        return self.all_states[
-                self.rng.random_integers(0, len(self.all_states) - 1)]
+    def get_random_state(self, goal_state=None):
+        states = self.all_states[:]
+        try:
+            states.remove(goal_state)
+        except:
+            pass
+        return states[self.rng.randint(0, len(states))]
 
     def run_episode(self, directory='test'):
         """
