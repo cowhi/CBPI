@@ -74,7 +74,6 @@ class LearnerQ(object):
     def get_action(self, state, *args):
         explore_propability = self.rng.uniform(0, 1)
         if explore_propability < self.epsilon:
-            # return self.rng.random_integers(0, self.action_count - 1)
             return self.rng.randint(0, self.action_count)
         else:
             Qs = []
@@ -95,7 +94,6 @@ class LearnerQ(object):
                         max_Qs.append(sorted_Qs[i][0])
                 return self.rng.choice(max_Qs)
             else:
-                # return self.rng.random_integers(0, self.action_count - 1)
                 return self.rng.randint(0, self.action_count)
 
     def load_Qs(self, source):

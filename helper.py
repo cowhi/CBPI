@@ -88,17 +88,23 @@ def summarize_runs_results(path_to_dir):
     steps = list(steps)
     reward = df.groupby(['episode'])['reward_mean']
     reward = list(reward)
+    effort = df.groupby(['episode'])['step_count']
+    effort = list(effort)
     summary = []
     for episode in range(0, len(reward)):
         step_mean, step_lower, step_upper = \
             mean_confidence_interval(steps[episode][1])
         reward_mean, reward_lower, reward_upper = \
             mean_confidence_interval(reward[episode][1])
-        summary.append([int(steps[episode][0]), step_mean,
-                        step_lower, step_upper,
-                        reward_mean, reward_lower, reward_upper])
+        effort_mean, effort_lower, effort_upper = \
+            mean_confidence_interval(effort[episode][1])
+        summary.append([int(steps[episode][0]),
+                        step_mean, step_lower, step_upper,
+                        reward_mean, reward_lower, reward_upper,
+                        effort_mean, effort_lower, effort_upper])
     header = ['episode', 'steps_mean', 'steps_lower', 'steps_upper',
-              'reward_mean', 'reward_lower', 'reward_upper']
+              'reward_mean', 'reward_lower', 'reward_upper',
+              'effort_mean', 'effort_lower', 'effort_upper']
     try:
         with open(os.path.join(path_to_dir, 'stats_task.csv'), 'w') \
                 as csvfile:
@@ -113,13 +119,13 @@ def summarize_runs_results(path_to_dir):
         sys.exit()
 
 
-def summarize_runs_policy_usage(path_to_dir):
+def summarize_runs_policy_choice(path_to_dir, kind='probs'):
     _logger = logging.getLogger(__name__)
     run_dirs = glob.glob(os.path.join(path_to_dir) + '/*/')
-    policy_usage_files = [os.path.join(run_dir, 'stats_policy_usage.csv')
-                          for run_dir in run_dirs]
+    policy_files = [os.path.join(run_dir, 'stats_policy_' + kind + '.csv')
+                    for run_dir in run_dirs]
     df = pd.concat((pd.read_csv(policy_usage_file)
-                    for policy_usage_file in policy_usage_files))
+                    for policy_usage_file in policy_files))
     policies = list(df)
     policies = [policy for policy in policies if 'episode' not in policy]
     for policy in policies:
@@ -127,14 +133,14 @@ def summarize_runs_policy_usage(path_to_dir):
         usage = list(usage)
         summary = []
         for episode in range(0, len(usage)):
-            usage_mean, usage_lower, usage_upper = \
+            mean_value, lower_value, upper_value = \
                mean_confidence_interval(usage[episode][1])
             summary.append([int(usage[episode][0]),
-                            usage_mean, usage_lower, usage_upper])
-        header = ['episode', 'usage_mean', 'usage_lower', 'usage_upper']
+                            mean_value, lower_value, upper_value])
+        header = ['episode', 'mean', 'lower', 'upper']
         try:
             with open(os.path.join(path_to_dir,
-                                   'stats_usage_'+str(policy)+'.csv'),
+                                   kind + '_'+str(policy)+'.csv'),
                       'w') as csvfile:
                 writer = csv.writer(csvfile,
                                     dialect='excel',
@@ -151,7 +157,7 @@ def plot_run(path_to_dir):
     df = pd.read_csv(os.path.join(path_to_dir, 'stats_run.csv'))
     # print(df)
     for column in df.columns:
-        plt.figure(figsize=(10, 6), dpi=80)
+        plt.figure(figsize=(10, 4), dpi=80)
         plt.plot(df['episode'], df[column],
                  label=column, color='blue', linewidth=2.0)
         plt.ylabel(column, fontsize=20, fontweight='bold')
@@ -168,7 +174,7 @@ def plot_runs(path_to_dir):
     for run_dir in run_dirs:
         dfs.append(pd.read_csv(os.path.join(run_dir, 'stats_run.csv')))
     for column in dfs[0].columns:
-        plt.figure(figsize=(10, 6), dpi=80)
+        plt.figure(figsize=(10, 4), dpi=80)
         run_count = 1
         for df in dfs:
             plt.plot(df['episode'], df[column],
@@ -184,10 +190,18 @@ def plot_runs(path_to_dir):
 
 def plot_task(path_to_dir):
     df = pd.read_csv(os.path.join(path_to_dir, 'stats_task.csv'))
-    factors = ['steps', 'reward']
-    colors = ['blue', 'green']
+    factors = ['steps', 'reward', 'effort']
+    colors = ['blue', 'green', 'red']
     for factor, color in zip(factors, colors):
-        plt.figure(figsize=(10, 6), dpi=80)
+        plt.figure(figsize=(10, 4), dpi=80)
+        if factor == 'steps':
+            df[factor + '_mean'] = df[factor + '_mean'].clip(0.0, 100.0)
+            df[factor + '_lower'] = df[factor + '_lower'].clip(0.0, 100.0)
+            df[factor + '_upper'] = df[factor + '_upper'].clip(0.0, 100.0)
+        if factor == 'reward':
+            df[factor + '_mean'] = df[factor + '_mean'].clip(0.0, 1.0)
+            df[factor + '_lower'] = df[factor + '_lower'].clip(0.0, 1.0)
+            df[factor + '_upper'] = df[factor + '_upper'].clip(0.0, 1.0)
         plt.plot(df['episode'], df[factor + '_mean'],
                  label=factor+'_mean', color=color, linewidth=2.0)
         plt.plot(df['episode'], df[factor + '_lower'],
@@ -208,20 +222,35 @@ def plot_task(path_to_dir):
         plt.close('all')
 
 
-def plot_policy_usage(path_to_dir):
-    df = pd.read_csv(os.path.join(path_to_dir, 'stats_policy_usage.csv'))
-    plt.figure(figsize=(10, 6), dpi=80)
+def plot_policy_choice(path_to_dir, kind='probs'):
+    if kind == 'probs':
+        ylabel = 'policy probability [%]'
+    else:
+        ylabel = 'policy mean [steps]'
+    df = pd.read_csv(os.path.join(path_to_dir,
+                                  'stats_policy_' + kind + '.csv'))
+    plt.figure(figsize=(10, 4), dpi=80)
     df.plot(x='episode')
-    plt.ylabel('policy probability [%]', fontsize=20, fontweight='bold')
+    plt.ylabel(ylabel, fontsize=20, fontweight='bold')
     plt.xlabel('episodes', fontsize=20, fontweight='bold')
     plt.legend(fontsize=14)
-    plt.savefig(os.path.join(path_to_dir, 'plot_policy_usage.png'),
+    plt.savefig(os.path.join(path_to_dir, 'plot_policy_' + kind + '.png'),
                 bbox_inches='tight')
     plt.close('all')
 
 
-def plot_policy_usage_summary(path_to_dir):
-    policy_files = glob.glob(os.path.join(path_to_dir) + '/stats_usage_*.csv')
+def plot_policy_choice_summary(path_to_dir, kind='probs'):
+    limit_lower = 0
+    if kind == 'probs':
+        ylabel = 'policy probability [%]'
+        skip = 6
+        limit_upper = 1.0
+    else:
+        ylabel = 'policy mean [steps]'
+        skip = 9
+        limit_upper = 100.0
+    policy_files = glob.glob(
+        os.path.join(path_to_dir) + '/' + kind + '_*.csv')
     colors = ['red', 'green', 'blue', 'yellow', 'black', 'brown', 'orange']
     plt.figure(figsize=(10, 4), dpi=80)
     color_count = 0
@@ -229,27 +258,29 @@ def plot_policy_usage_summary(path_to_dir):
         df = pd.read_csv(policy_file)
         policy_name = policy_file.split('/')
         policy_name = policy_name[-1].split('.')
-        policy_name = policy_name[0][12:]
-        plt.plot(df['episode'], df['usage_mean'],
+        policy_name = policy_name[0][skip:]
+        df['mean'] = df['mean'].clip(limit_lower, limit_upper)
+        df['lower'] = df['lower'].clip(limit_lower, limit_upper)
+        df['upper'] = df['upper'].clip(limit_lower, limit_upper)
+        plt.plot(df['episode'], df['mean'],
                  label=policy_name, color=colors[color_count], linewidth=2.0)
-        plt.plot(df['episode'], df['usage_lower'],
+        plt.plot(df['episode'], df['lower'],
                  label='_nolegend_', color=colors[color_count], linewidth=1.0)
-        plt.plot(df['episode'], df['usage_upper'],
+        plt.plot(df['episode'], df['upper'],
                  label='_nolegend_', color=colors[color_count], linewidth=1.0)
-        plt.fill_between(df['episode'], df['usage_mean'],
-                         df['usage_lower'],
+        plt.fill_between(df['episode'], df['mean'],
+                         df['lower'],
                          facecolor=colors[color_count], alpha=0.2)
-        plt.fill_between(df['episode'], df['usage_mean'],
-                         df['usage_upper'],
+        plt.fill_between(df['episode'], df['mean'],
+                         df['upper'],
                          facecolor=colors[color_count], alpha=0.2)
         color_count += 1
-
-    plt.ylabel('policy probability [%]', fontsize=20, fontweight='bold')
+    plt.ylabel(ylabel, fontsize=20, fontweight='bold')
     plt.xlabel('episodes', fontsize=20, fontweight='bold')
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
-    plt.xlim(0, 1000)
+    # plt.xlim(0, 1000)
     plt.legend(fontsize=14, loc='upper left')
-    plt.savefig(os.path.join(path_to_dir, 'plot_stats_usage.png'),
+    plt.savefig(os.path.join(path_to_dir, 'plot_policy_' + kind + '.png'),
                 bbox_inches='tight')
     plt.close('all')

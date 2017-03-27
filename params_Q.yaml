@@ -10,13 +10,13 @@ type: Q
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of one task
-runs: 50
+runs: 10
 # Number of training episodes within an experiment
 episodes: 1000
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes
-test_interval: 1
+test_interval: 10
 # unused, but needed in code
 tau_action: 0.0
 tau_policy: 0.0

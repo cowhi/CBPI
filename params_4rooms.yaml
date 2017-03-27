@@ -12,78 +12,57 @@ random_seed: 123
 # Number of repetitions of an experiment (50)
 runs: 10
 # Number of training episodes within an experiment (1000)
-episodes: 1000
+episodes: 200
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes (1)
 test_interval: 10
+# When to record the test episodes
+record_tests_interval: 20
 # Number of episodes between policy evaluations during training (10)
-policy_eval_interval: 25
+policy_eval_interval: 10
 # Number of tests to evaluate policy (100)
-policy_eval_episodes: 1
+policy_eval_episodes: 10
 # Factor to determine similarity (closeness) as percentage of map diagonal
 policy_eval_factor: 0.3
-# Starting confidence in eval policy
-policy_eval_confidence: 1.0
-# Loss of confidence per step to explore more towards end of evaluation
-policy_eval_conf_delta: 0.02
-# Loss of confidence per step to explore more towards end of evaluation
-policy_eval_conf_stop: 0.2
-# Amount of states which is used to test against other policies
-policy_eval_states: 500
 # interval when the policy with the lowest policy probability is cut
 # policy_eliminate_interval: 1000
 # at which probability do we start not using a certain policy anymore (0.1)
-policy_importance_limit: 0.1
+policy_importance_limit: 0.0
 # max policies for current task
 task_library_size: 5
-# temperature factor for action probabillities with softmax (0.01)
+# temperature factor for action probabillities with softmax
 tau_action: 0.01
-# temperature factor for policy probabillities with softmax (0.15)
-tau_policy: 1.5
+# temperature factor for policy probabillities with softmax
+tau_policy: 0.1
 # temperature factor for policy probabillities with softmax (0.0025)
-tau_policy_change: 0.02
+tau_policy_change: 0.0
 # to evaluate the current performance count steps for these
 # starting positions
 test_positions:
     - [1, 1]
-    - [7, 1]
+    - [11, 1]
     - [1, 11]
-    - [3, 17]
-    - [9, 11]
-    - [20, 5]
-    - [12, 9]
-    - [21, 19]
-    - [12, 15]
-    - [22, 3]
+    - [11, 11]
 # describe tasks by name and goal position
 tasks:
     - name: omega
-      goal_pos: [18, 1]
+      goal_pos: [3, 7]
 # will we use pretrained policies
 load_policies: True
 # where are those policies
 learned_policies:
     - name: omega1
-      goal_pos: [15, 2]
-      directory: /Users/rubenglatt/playground/CBPI/logs/1_2017-03-18_16-28_q_policyreuse2006/task_omega1/
+      goal_pos: [5, 5]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-20_10-43_q_4rooms/task_omega1/
     - name: omega2
-      goal_pos: [3, 2]
-      directory: /Users/rubenglatt/playground/CBPI/logs/1_2017-03-18_16-28_q_policyreuse2006/task_omega2/
-    - name: omega3
-      goal_pos: [3, 18]
-      directory: /Users/rubenglatt/playground/CBPI/logs/1_2017-03-18_16-28_q_policyreuse2006/task_omega3/
-    - name: omega4
-      goal_pos: [20, 18]
-      directory: /Users/rubenglatt/playground/CBPI/logs/1_2017-03-18_16-28_q_policyreuse2006/task_omega4/
-    - name: omega5
-      goal_pos: [20, 2]
-      directory: /Users/rubenglatt/playground/CBPI/logs/1_2017-03-18_16-28_q_policyreuse2006/task_omega5/
+      goal_pos: [5, 7]
+      directory: /Users/rubenglatt/playground/CBPI/logs/2017-03-20_10-43_q_4rooms/task_omega2/
 ############################
 ### Environment Settings ###
 ############################
-grid: PolicyReuse2006
-visual: False
+grid: 4rooms
+visual: True
 #########################
 ### Learning Settings ###
 #########################

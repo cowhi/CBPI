@@ -111,7 +111,9 @@ class Experiment(object):
                                 'episode',
                                 'steps_total', 'steps_mean',
                                 'reward_total', 'reward_mean',
-                                'epsilon')
+                                'epsilon', 'step_count')
+
+        self.run_steps = 0
         self.init_run_exp(task_name, run)
 
     def cleanup_run(self, run):
@@ -164,7 +166,8 @@ class Experiment(object):
         for test_pos in self.params['test_positions']:
             self.init_episode()
             self.run_episode(test_pos,
-                             tuple(task['goal_pos']))
+                             tuple(task['goal_pos']),
+                             task['name'])
             self.test_steps.append(self.steps_in_episode)
             self.test_rewards.append(self.reward_in_episode)
         helper.write_stats_file(self.run_stats_file,
@@ -174,7 +177,8 @@ class Experiment(object):
                                 sum(self.test_rewards),
                                 np.mean(self.test_rewards),
                                 float("{0:.5f}"
-                                      .format(self.learner.last_epsilon)))
+                                      .format(self.learner.last_epsilon)),
+                                self.run_steps)
         self.learner.save_Qs(os.path.join(self.episode_dir,
                                           'Qs.npy'))
         # Make video from random position
@@ -182,18 +186,20 @@ class Experiment(object):
             self.set_status('recording', task['name'], run, episode)
             self.run_episode(
                 self.env.get_random_state(tuple(task['goal_pos'])),
-                tuple(task['goal_pos']))
+                tuple(task['goal_pos']),
+                task['name'])
         self.learner.set_epsilon(self.learner.last_epsilon)
 
         if not episode % self.params['policy_eval_interval'] == 0 or \
                 episode == 0:
             self.set_status('training', task['name'], run, episode)
 
-    def run_episode(self, agent_pos, goal_pos, policy=None):
+    def run_episode(self, agent_pos, goal_pos, policy_name=None):
         """
             Function to run a single episode
         """
-        _logger.debug("Start episode")
+        if self.status == 'training':
+            _logger.debug("Start episode")
         self.env.reset_env()
         self.env.add_agent(agent_pos, self.agent_name)
         self.env.add_goal(goal_pos)
@@ -201,23 +207,33 @@ class Experiment(object):
             self.env.draw_frame()
             self.env.save_current_frame(self.episode_dir)
         state = self.env.get_current_state(self.agent_name)
+        # TODO: change to give policy instead of library
         action_id = self.learner.get_action(state,
                                             self.current_library,
+                                            policy_name,
                                             self.status,
                                             self.params['tau_action'])
         reward = self.env.step(self.env.actions[action_id],
                                self.agent_name)
         state_prime = self.env.get_current_state(self.agent_name)
-        _logger.debug("%s + %s(%s) = %s + %s" %
-                      (str(state),
-                       str(action_id),
-                       str(self.env.actions[action_id]),
-                       str(reward),
-                       str(state_prime)))
+        if self.status in ['training', 'policy_eval']:
+            self.run_steps += 1
+        if self.status == 'recording':
+            self.env.draw_frame()
+            self.env.save_current_frame(self.episode_dir)
         if self.status in ['testing', 'policy_eval']:
             self.steps_in_episode += 1
             self.reward_in_episode += reward
+        if self.status == 'policy_eval':
+            self.current_library[policy_name]['confidence'] -= \
+                self.params['policy_eval_conf_delta']
         if self.status == 'training' and not self.env.episode_ended:
+            _logger.debug("%s + %s(%s) = %s + %s" %
+                          (str(state),
+                           str(action_id),
+                           str(self.env.actions[action_id]),
+                           str(reward),
+                           str(state_prime)))
             _logger.debug("Old Q[%s, %s]: %s" %
                           (str(state[0:2]),
                            str(action_id),
@@ -228,28 +244,36 @@ class Experiment(object):
                           (str(state[0:2]),
                            str(action_id),
                            str(self.learner.Q[state[0:2], action_id])))
-        if self.status == 'recording':
-            self.env.draw_frame()
-            self.env.save_current_frame(self.episode_dir)
         while not self.env.episode_ended:
             state = state_prime
             action_id = self.learner.get_action(state,
                                                 self.current_library,
+                                                policy_name,
                                                 self.status,
                                                 self.params['tau_action'])
             reward = self.env.step(self.env.actions[action_id],
                                    self.agent_name)
             state_prime = self.env.get_current_state(self.agent_name)
-            _logger.debug("%s + %s(%s) = %s + %s" %
-                          (str(state),
-                           str(action_id),
-                           str(self.env.actions[action_id]),
-                           str(reward),
-                           str(state_prime)))
+            if self.status in ['training', 'policy_eval']:
+                self.run_steps += 1
+            if self.status == 'recording':
+                self.env.draw_frame()
+                self.env.save_current_frame(self.episode_dir)
             if self.status in ['testing', 'policy_eval']:
                 self.steps_in_episode += 1
                 self.reward_in_episode += reward
+            if self.status == 'policy_eval':
+                if self.current_library[policy_name]['confidence'] > \
+                        self.params['policy_eval_conf_stop']:
+                    self.current_library[policy_name]['confidence'] -= \
+                        self.params['policy_eval_conf_delta']
             if self.status == 'training':
+                _logger.debug("%s + %s(%s) = %s + %s" %
+                              (str(state),
+                               str(action_id),
+                               str(self.env.actions[action_id]),
+                               str(reward),
+                               str(state_prime)))
                 _logger.debug("Old Q[%s, %s]: %s" %
                               (str(state[0:2]),
                                str(action_id),
@@ -260,12 +284,10 @@ class Experiment(object):
                               (str(state[0:2]),
                                str(action_id),
                                str(self.learner.Q[state[0:2], action_id])))
-            if self.status == 'recording':
-                self.env.draw_frame()
-                self.env.save_current_frame(self.episode_dir)
             if self.env.step_count >= self.env.max_steps:
                 self.env.episode_ended = True
-        _logger.debug("End episode")
+        if self.status == 'training':
+            _logger.debug("End episode")
         if self.env.visual and self.status == 'recording':
             self.env.make_video(self.episode_dir)
 
@@ -278,24 +300,25 @@ class Experiment(object):
                 for episode in range(1, self.params['episodes'] + 1):
                     self.run_episode(
                         self.env.get_random_state(tuple(task['goal_pos'])),
-                        tuple(task['goal_pos']))
+                        tuple(task['goal_pos']),
+                        task['name'])
                     if episode % self.params['test_interval'] == 0:
                         self.run_tests(task, run, episode)
                     if episode % self.params['policy_eval_interval'] == 0:
                         self.evaluate_current_library(task['name'],
                                                       run, episode)
-                    # TODO: eval episode
+                    # TODO: eval episode ???
                     if self.learner.epsilon > -1 * self.learner.epsilon_change:
                         self.learner.set_epsilon(self.learner.epsilon +
                                                  self.learner.epsilon_change)
                 self.cleanup_run(run)
             self.cleanup_task(task['name'])
-        # self.set_s tatus('done')
         _logger.info("Done")
 
     def save_best_episode(self, run):
         # Save best Q-table for current run
         df = pd.read_csv(os.path.join(self.run_dir, 'stats_run.csv'))
+        # _logger.info('steps_mean: ' + str(df['steps_mean']))
         least_steps_row = df.ix[df['steps_mean'].idxmin()]
         run_best_file = os.path.join(self.run_dir, 'stats_run_best.csv')
         helper.write_stats_file(run_best_file,

@@ -3,6 +3,7 @@
 import os
 import math
 import collections
+import difflib
 from experiment import Experiment
 from learner_CBPI import LearnerCBPI
 import helper
@@ -38,7 +39,6 @@ class ExperimentCBPI(Experiment):
         if self.params['load_policies']:
             self.fill_library()
         self.current_library = collections.OrderedDict()
-        # self.set_s tatus('idle')
 
     def fill_library(self):
         for learned_policy in self.params['learned_policies']:
@@ -53,20 +53,27 @@ class ExperimentCBPI(Experiment):
     def init_run_exp(self, task_name, run):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
-
+        # TODO: set epsilon to 0.2 if current_library > 1
         if task_name == 'omega':
             self.learner.set_epsilon(0.2)
             self.learner.set_epsilon(0.2)
         else:
             self.learner.set_epsilon(self.params['epsilon'])
             self.learner.set_epsilon(self.params['epsilon'])
-        self.run_lib_file = os.path.join(self.run_dir,
-                                         'stats_policy_usage.csv')
+        self.run_lib_probs_file = os.path.join(self.run_dir,
+                                               'stats_policy_probs.csv')
+        self.run_lib_absolute_file = os.path.join(self.run_dir,
+                                                  'stats_policy_absolute.csv')
         policy_usage_header = self.task_policies[:]
         policy_usage_header.insert(0, 'episode')
-        helper.write_stats_file(self.run_lib_file,
+        helper.write_stats_file(self.run_lib_probs_file,
+                                policy_usage_header)
+        helper.write_stats_file(self.run_lib_absolute_file,
                                 policy_usage_header)
         self.tau_policy = self.params['tau_policy']
+        for policy_name in self.current_library:
+            self.current_library[policy_name]['active'] = True
+        self.active_policies = len(self.task_policies)
         self.evaluate_current_library(task_name, run, 0)
 
     def init_task_exp(self, task_name):
@@ -75,13 +82,16 @@ class ExperimentCBPI(Experiment):
         self.build_policy_library(task_name)
 
     def cleanup_task_exp(self, task_name):
-        helper.summarize_runs_policy_usage(self.task_dir)
-        helper.plot_policy_usage_summary(self.task_dir)
+        helper.summarize_runs_policy_choice(self.task_dir, 'probs')
+        helper.plot_policy_choice_summary(self.task_dir, 'probs')
+        helper.summarize_runs_policy_choice(self.task_dir, 'absolute')
+        helper.plot_policy_choice_summary(self.task_dir, 'absolute')
         self.update_library(task_name)
         self.current_library = collections.OrderedDict()
 
     def cleanup_run_exp(self, path_to_dir):
-        helper.plot_policy_usage(path_to_dir)
+        helper.plot_policy_choice(path_to_dir, 'probs')
+        helper.plot_policy_choice(path_to_dir, 'absolute')
 
     def init_library(self, task_name):
         """ Adds the initialized policy to the library for learning the
@@ -103,35 +113,44 @@ class ExperimentCBPI(Experiment):
             policies to a predefined number (self.params['task_library_size']).
         """
         # TODO: make more general to learn all tasks using the library
+        '''
         if task_name == 'omega':
-            task_index = next(index
-                              for (index, d) in enumerate(self.params['tasks'])
-                              if d['name'] == task_name)
-            potential_policies = []
-            similarity_limit = self.get_similarity_limit()
-            for policy_name in self.library:
-                similarity = self.get_similarity(policy_name, task_index)
-                _logger.debug("%s: distance_to_%s %s <= map_diagonal %s" %
-                              (policy_name, task_name,
-                               str(similarity), str(similarity_limit)))
-                if similarity < similarity_limit:
-                    potential_policies.append([policy_name, similarity])
-            potential_policies.sort(key=lambda x: x[1])
-            _logger.debug("Sorted potential policies: %s" %
-                          str(potential_policies))
-            self.task_policies = []
-            for policy_name, distance \
-                    in potential_policies[0:self.params['task_library_size']]:
-                self.current_library[policy_name] = \
-                    self.library[policy_name]
-                self.current_library[policy_name]['weight'] = 0.0
-                self.current_library[policy_name]['active'] = True
-                self.task_policies.append(policy_name)
+        '''
+
+        task_index = next(index
+                          for (index, d) in enumerate(self.params['tasks'])
+                          if d['name'] == task_name)
+        potential_policies = []
+        similarity_limit = self.get_similarity_limit()
+        for policy_name in self.library:
+            similarity = self.get_similarity(policy_name, task_index)
+            _logger.debug("%s: distance_to_%s %s <= map_diagonal %s" %
+                          (policy_name, task_name,
+                           str(similarity), str(similarity_limit)))
+            if similarity < similarity_limit:
+                potential_policies.append([policy_name, similarity])
+        potential_policies.sort(key=lambda x: x[1])
+        _logger.debug("Sorted potential policies: %s" %
+                      str(potential_policies))
+        self.task_policies = []
+        for policy_name, distance \
+                in potential_policies[0:self.params['task_library_size']]:
+            self.current_library[policy_name] = \
+                self.library[policy_name]
+            self.current_library[policy_name]['weight'] = 0.0
+            self.current_library[policy_name]['active'] = True
+            self.current_library[policy_name]['confidence'] = \
+                self.params['policy_eval_confidence']
+            self.task_policies.append(policy_name)
+        '''
         else:
             self.current_library[task_name] = self.library[task_name]
             self.current_library[task_name]['weight'] = 0.0
             self.current_library[task_name]['active'] = True
+            self.current_library[policy_name]['confidence'] = \
+                self.params['policy_eval_confidence']
             self.task_policies = [task_name]
+        '''
         _logger.info("Source policies for %s: %s" %
                      (str(task_name), str(self.task_policies)))
 
@@ -151,28 +170,51 @@ class ExperimentCBPI(Experiment):
 
     def evaluate_current_library(self, task_name=None, run=None, episode=None):
         self.set_status('policy_eval', task_name, run, episode)
-        divider = 0.0
-        for policy_name in self.current_library:
-            if self.current_library[policy_name]['active']:
-                policy_results_mean = self.get_mean_test_results(
-                    self.current_library[policy_name]['Q'],
-                    self.current_library[policy_name]['goal_pos'])
-                _logger.debug("Mean steps with policy %s: %s" %
-                              (policy_name,
-                               str(policy_results_mean)))
-                self.current_library[policy_name]['weight'] = \
-                    self.get_policy_weight(policy_results_mean)
-            else:
-                self.current_library[policy_name]['weight'] = 0.0
-            divider += self.current_library[policy_name]['weight']
-        weights = [episode]
-        for policy_name in self.current_library:
-            self.current_library[policy_name]['weight'] /= divider
-            weights.append(self.current_library[policy_name]['weight'])
-            _logger.debug("%s: weight = %s" %
-                          (policy_name,
-                           str(self.current_library[policy_name]['weight'])))
-        helper.write_stats_file(self.run_lib_file,
+        removed_policy = True
+        while removed_policy:
+            removed_policy = False
+            divider = 0.0
+            absolute = [episode]
+            for policy_name in self.current_library:
+                if self.current_library[policy_name]['active']:
+                    if self.active_policies > 1:
+                        policy_results_mean = self.get_mean_test_results(
+                            policy_name,
+                            task_name,
+                            episode)
+                        self.current_library[policy_name]['weight'] = \
+                            self.get_policy_weight(policy_results_mean)
+                        absolute.append(policy_results_mean)
+                    else:
+                        absolute.append(0.0)
+                else:
+                    self.current_library[policy_name]['weight'] = 0.0
+                    absolute.append(0.0)
+                divider += self.current_library[policy_name]['weight']
+            weights = [episode]
+            for policy_name in self.current_library:
+                if self.current_library[policy_name]['active']:
+                    if self.active_policies > 1:
+                        self.current_library[policy_name]['weight'] /= divider
+                        if self.current_library[policy_name]['weight'] < \
+                                self.params['policy_importance_limit'] and not\
+                                policy_name == task_name:
+                            self.current_library[policy_name]['active'] = False
+                            self.active_policies -= 1
+                            _logger.debug("Episode %s: Deactivated policy %s" %
+                                          (str(episode), policy_name))
+                            removed_policy = True
+                            break
+                    else:
+                        self.current_library[policy_name]['weight'] = 1.0
+                weights.append(self.current_library[policy_name]['weight'])
+                _logger.debug(
+                    "%s: weight = %s" %
+                    (policy_name,
+                     str(self.current_library[policy_name]['weight'])))
+        helper.write_stats_file(self.run_lib_absolute_file,
+                                absolute)
+        helper.write_stats_file(self.run_lib_probs_file,
                                 weights)
         self.update_train_settings()
         if episode == self.params['episodes']:
@@ -189,47 +231,94 @@ class ExperimentCBPI(Experiment):
             Also updates the current library if a policy becomes
             too unimportant.
         """
-        # TODO: make this more dependent on development of learning progress
+        # TODO FUTURE: make this more dependent on development
+        # of learning progress
         if self.tau_policy > 1.1 * self.params['tau_policy_change']:
-            # print(self.tau_policy, self.params['tau_policy_change'])
             self.tau_policy -= self.params['tau_policy_change']
-        for policy_name in self.current_library:
-            if self.current_library[policy_name]['weight'] < \
-                    self.params['policy_importance_limit']:
-                self.current_library[policy_name]['active'] = False
-                _logger.debug("Deactivated policy %s" % policy_name)
 
     def get_policy_weight(self, policy_results_mean):
         """ Returns the weight for the used policy.
         """
         return np.exp(-1.0 * (policy_results_mean /
                       self.tau_policy) /
-                      (self.params['policy_eval_episodes'] *
-                       len(self.params['test_positions'])))
+                      len(self.params['test_positions']))
 
     def update_library(self, task_name):
+        self.library[task_name]['Q'] = \
+            self.learner.load_Qs(os.path.join(self.task_dir,
+                                              'best_Qs.npy'))
+        if len(self.task_policies) > 1 and \
+                not self.add_to_library(task_name):
+            # remove current task from library
+            _logger.info('Not adding %s' % str(task_name))
+            del self.library[task_name]
+        pass
+
+    def add_to_library(self, task_name):
         # TODO: library compare policies using score on final policy minus
         # threshold
-        similar = True
-        if not similar:
-            # remove current task from library
-            del self.library[task_name]
+        eval_lib = {}
+        for policy_name in self.current_library:
+            eval_lib[policy_name] = []
+        for i in range(0, self.params['policy_eval_states']):
+            # 1) select random state
+            random_state = self.env.get_random_state(
+                tuple(self.library[task_name]['goal_pos']))
+            # 2) get actions for each policy in each random state
+            for policy_name in self.current_library:
+                action_id = self.learner.get_action(random_state,
+                                                    self.current_library,
+                                                    policy_name,
+                                                    self.status,
+                                                    self.params['tau_action'])
+                eval_lib[policy_name].append(action_id)
+                # TODO: count to total steps
+        # 3) compare parity with current_library
+        similarities = []
+        for policy_name in self.current_library:
+            if not policy_name == task_name:
+                # workaround to avoid errors with difflib
+                count_steps = 0.0
+                ratio = 0.0
+                for i in range(0, self.params['policy_eval_states'] + 1, 100):
+                    sm = difflib.SequenceMatcher(
+                            None,
+                            eval_lib[task_name][i:i+100],
+                            eval_lib[policy_name][i:i+100])
+                    count_steps += 1.0
+                    ratio += sm.ratio()
+                ratio = ratio / count_steps
+                _logger.info('Overlap %s - %s: %s' %
+                             (str(task_name), str(policy_name),
+                              str(ratio)))
+                similarities.append(ratio)
+                # if sm.ratio() > 0.9:
+                #    return False
+        if max(similarities) > 0.9:
+            return False
+        # 4) return true if very different
+        return True
 
-    def get_mean_test_results(self, policy, goal_pos):
+    def get_mean_test_results(self, policy_name, task_name, episode):
         policy_results = []
         for i in range(0, self.params['policy_eval_episodes']):
-            results_mean = self.run_policy_evals(policy, goal_pos)
+            results_mean = \
+                self.run_policy_evals(policy_name, task_name)
             policy_results.append(results_mean)
         return np.mean(policy_results)
 
-    def run_policy_evals(self, policy, goal_pos):
+    def run_policy_evals(self, policy_name, task_name):
         self.test_steps = []
         self.test_rewards = []
+        _logger.debug('Eval %s with: %s' % (str(task_name), str(policy_name)))
         for test_pos in self.params['test_positions']:
             self.init_episode()
-            self.run_episode(test_pos,
-                             tuple(goal_pos),
-                             policy)
+            self.current_library[policy_name]['confidence'] = \
+                self.params['policy_eval_confidence']
+            self.run_episode(
+                test_pos,
+                tuple(self.current_library[task_name]['goal_pos']),
+                policy_name)
             self.test_steps.append(self.steps_in_episode)
             self.test_rewards.append(self.reward_in_episode)
         _logger.debug("Steps per test: %s" %

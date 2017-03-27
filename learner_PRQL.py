@@ -7,11 +7,11 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class LearnerCBPI(LearnerQ):
+class LearnerPRQL(LearnerQ):
     def __init__(self, action_count=4, name='CBPI',
                  epsilon=1.0, epsilon_change=-0.0005, alpha=0.05, gamma=0.95,
                  source=None, rng=np.random.RandomState(1)):
-        super(LearnerCBPI, self).__init__(action_count, name,
+        super(LearnerPRQL, self).__init__(action_count, name,
                                           epsilon, epsilon_change,
                                           alpha, gamma,
                                           source, rng)
