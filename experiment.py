@@ -118,6 +118,7 @@ class Experiment(object):
 
     def cleanup_run(self, run):
         self.save_best_episode(run)
+        helper.delete_dirs(self.run_dir)
         helper.plot_run(self.run_dir)
         self.cleanup_run_exp(self.run_dir)
         _logger.info("..... Finished run %s" % str(run))
@@ -318,7 +319,6 @@ class Experiment(object):
     def save_best_episode(self, run):
         # Save best Q-table for current run
         df = pd.read_csv(os.path.join(self.run_dir, 'stats_run.csv'))
-        # _logger.info('steps_mean: ' + str(df['steps_mean']))
         least_steps_row = df.ix[df['steps_mean'].idxmin()]
         run_best_file = os.path.join(self.run_dir, 'stats_run_best.csv')
         helper.write_stats_file(run_best_file,

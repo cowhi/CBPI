@@ -47,6 +47,6 @@ class ExperimentQ(Experiment):
 
 if __name__ == "__main__":
     params_file = os.path.join(os.getcwd(),
-                               'params_Q.yaml')
+                               'params_test.yaml')
     exp = ExperimentQ(params_file)
     exp.main()

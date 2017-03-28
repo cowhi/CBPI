@@ -16,7 +16,7 @@ episodes: 1000
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes (1)
-test_interval: 10
+test_interval: 1
 # Number of episodes between policy evaluations during training (10)
 policy_eval_interval: 25
 # Number of tests to evaluate policy (100)

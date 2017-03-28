@@ -14,6 +14,17 @@ import logging
 sns.set(style="darkgrid")
 
 
+def delete_dirs(path_to_dir):
+    _logger = logging.getLogger(__name__)
+    episode_dirs = glob.glob(os.path.join(path_to_dir) + '/episode_*/')
+    try:
+        for episode_dir in episode_dirs:
+            shutil.rmtree(episode_dir)
+    except:
+        _logger.critical("Can't delete directory - %s" % str(episode_dir))
+        sys.exit()
+
+
 def create_dir(path_to_dir):
     _logger = logging.getLogger(__name__)
     if not os.path.isdir(path_to_dir):

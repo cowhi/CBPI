@@ -87,8 +87,8 @@ class Gridworld(object):
                 if symbol == "-":
                     self.image.rectangle([x1, y1, x2, y2], black)
                 if symbol == "r":
-                    # self.image.rectangle([x1, y1, x2, y2], white)
-                    self.image.rectangle([x1, y1, x2, y2], yellow_light)
+                    self.image.rectangle([x1, y1, x2, y2], white)
+                    # self.image.rectangle([x1, y1, x2, y2], yellow_light)
                 if symbol == "c":
                     # self.image.rectangle([x1, y1, x2, y2], yellow)
                     self.image.rectangle([x1, y1, x2, y2], white)
@@ -103,8 +103,8 @@ class Gridworld(object):
             y1 = int(agent_coords[1]) * self.cell_height
             x2 = x1 + self.cell_width
             y2 = y1 + self.cell_height
-            self.image.ellipse([x1, y1, x2, y2], blue_light)
-            # self.image.ellipse([x1, y1, x2, y2], white)
+            # self.image.ellipse([x1, y1, x2, y2], blue_light)
+            self.image.ellipse([x1, y1, x2, y2], white)
 
     def draw_goals(self):
         for goal_coords, goal_values in self.goals.items():
