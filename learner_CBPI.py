@@ -18,7 +18,7 @@ class LearnerCBPI(LearnerQ):
 
     def get_action(self, state, library=None, eval_policy=None,
                    status='training', tau=0.1):
-        if status in ['testing']:
+        if status in ['testing', 'library_eval']:
             Qs = []
             action_values = []
             for action in range(0, self.action_count):
@@ -28,6 +28,8 @@ class LearnerCBPI(LearnerQ):
                 except KeyError:
                     action_values.append(0.0)
             if sum(action_values) == 0.0:
+                if status == 'library_eval':
+                    return 0
                 return self.rng.randint(0, self.action_count)
             return np.argmax(action_values)
         if status in ['policy_eval']:

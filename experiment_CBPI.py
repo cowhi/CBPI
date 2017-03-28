@@ -244,7 +244,7 @@ class ExperimentCBPI(Experiment):
                       len(self.params['test_positions']))
 
     def update_library(self, task_name):
-        self.set_status('testing', task_name, 0, 0)
+        self.set_status('library_eval', task_name, 0, 0)
         self.library[task_name]['Q'] = \
             self.learner.load_Qs(os.path.join(self.task_dir,
                                               'best_Qs.npy'))
