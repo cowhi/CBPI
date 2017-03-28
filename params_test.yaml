@@ -6,7 +6,7 @@ log_type: file
 # Level logging output ('DEBUG', 'INFO', etc.)
 log_level: INFO
 # Type of experiment to run
-type: Q
+type: CBPI
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of one task

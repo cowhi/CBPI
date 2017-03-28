@@ -244,6 +244,7 @@ class ExperimentCBPI(Experiment):
                       len(self.params['test_positions']))
 
     def update_library(self, task_name):
+        self.set_status('testing', task_name, 0, 0)
         self.library[task_name]['Q'] = \
             self.learner.load_Qs(os.path.join(self.task_dir,
                                               'best_Qs.npy'))
@@ -252,7 +253,11 @@ class ExperimentCBPI(Experiment):
             # remove current task from library
             _logger.info('Not adding %s' % str(task_name))
             del self.library[task_name]
-        pass
+        # policies = []
+        # for policy_name in self.library:
+        #    policies.append(policy_name)
+        _logger.info('Library (size=%s): %s' % (str(len(self.library)),
+                                                str(self.library.keys())))
 
     def add_to_library(self, task_name):
         # TODO: library compare policies using score on final policy minus
@@ -294,7 +299,7 @@ class ExperimentCBPI(Experiment):
                 similarities.append(ratio)
                 # if sm.ratio() > 0.9:
                 #    return False
-        if max(similarities) > 0.9:
+        if max(similarities) > self.params['policy_similarity_limit']:
             return False
         # 4) return true if very different
         return True
