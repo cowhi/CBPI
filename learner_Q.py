@@ -71,7 +71,11 @@ class LearnerQ(object):
                 Qs.append(0.0)
         return max(Qs)
 
-    def get_action(self, state, *args):
+    # def get_action(self, state, *args):
+    def get_action(self, state):
+        """ Gets the action_id following the policy for the given
+            task in a given state.
+        """
         explore_propability = self.rng.uniform(0, 1)
         if explore_propability < self.epsilon:
             return self.rng.randint(0, self.action_count)

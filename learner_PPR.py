@@ -7,18 +7,19 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class LearnerPRQL(LearnerQ):
-    def __init__(self, action_count=4, name='CBPI',
+class LearnerPPR(LearnerQ):
+    def __init__(self, action_count=4, name='PPR',
                  epsilon=1.0, epsilon_change=-0.0005, alpha=0.05, gamma=0.95,
                  source=None, rng=np.random.RandomState(1)):
-        super(LearnerPRQL, self).__init__(action_count, name,
-                                          epsilon, epsilon_change,
-                                          alpha, gamma,
-                                          source, rng)
+        super(LearnerPPR, self).__init__(action_count, name,
+                                         epsilon, epsilon_change,
+                                         alpha, gamma,
+                                         source, rng)
 
     def get_action(self, state, library=None, eval_policy=None,
                    status='training', tau=0.1):
-        if status in ['testing']:
+        """ Get an action according to current policy during testing  """
+        if status in ['testing', 'library_eval']:
             Qs = []
             action_values = []
             for action in range(0, self.action_count):
@@ -28,8 +29,12 @@ class LearnerPRQL(LearnerQ):
                 except KeyError:
                     action_values.append(0.0)
             if sum(action_values) == 0.0:
+                if status == 'library_eval':
+                    return 0
                 return self.rng.randint(0, self.action_count)
             return np.argmax(action_values)
+        """ Get an action according to current policy with increasing
+            doubt per step when evaluating the policies in the library. """
         if status in ['policy_eval']:
             doubt = self.rng.uniform(0, 1)
             if library[eval_policy]['confidence'] > doubt:
@@ -47,6 +52,7 @@ class LearnerPRQL(LearnerQ):
             else:
                 return self.rng.randint(0, self.action_count)
         # if training
+        # TODO: Adapt to policy reuse
         explore_propability = self.rng.uniform(0, 1)
         if explore_propability < self.epsilon:
             _logger.debug("### Random action ###")

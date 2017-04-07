@@ -6,21 +6,21 @@ log_type: file
 # Level logging output ('DEBUG', 'INFO', etc.)
 log_level: INFO
 # Type of experiment to run
-type: PRQL
+type: CBPI
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of an experiment (50)
-runs: 3
+runs: 2
 # Number of training episodes within an experiment (1000)
-episodes: 500
+episodes: 100
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes (1)
-test_interval: 50
+test_interval: 10
 # Number of episodes between policy evaluations during training (10)
-policy_eval_interval: 50
+policy_eval_interval: 25
 # Number of tests to evaluate policy (100)
-policy_eval_episodes: 10
+policy_eval_episodes: 1
 # Factor to determine similarity (closeness) as percentage of map diagonal
 policy_eval_factor: 0.3
 # Starting confidence in eval policy
@@ -29,16 +29,22 @@ policy_eval_confidence: 1.0
 policy_eval_conf_delta: 0.02
 # Loss of confidence per step to explore more towards end of evaluation
 policy_eval_conf_stop: 0.2
+# Amount of states which is used to test against other policies
+policy_eval_states: 500
+# Limit of overlap to take new policy into library
+policy_similarity_limit: 0.7
+# interval when the policy with the lowest policy probability is cut
+# policy_eliminate_interval: 1000
 # at which probability do we start not using a certain policy anymore (0.1)
 policy_importance_limit: 0.1
 # max policies for current task
-task_library_size: 5
+task_library_size: 3
 # temperature factor for action probabillities with softmax (0.01)
 tau_action: 0.01
-# temperature factor for policy probabillities with softmax
-tau_policy: 0.15
-# temperature factor for policy probabillities with softmax (0.0025)
-tau_policy_change: 0.002
+# temperature factor for policy probabillities with softmax (0.15) 1.5
+tau_policy: 1.0
+# temperature factor for policy probabillities with softmax (0.0025) 0.02
+tau_policy_change: 0.05
 # to evaluate the current performance count steps for these
 # starting positions
 test_positions:
@@ -55,7 +61,7 @@ test_positions:
 # describe tasks by name and goal position
 tasks:
     - name: omega
-      goal_pos: [18, 1]
+      goal_pos: [20, 2]
 # will we use pretrained policies
 load_policies: True
 # where are those policies

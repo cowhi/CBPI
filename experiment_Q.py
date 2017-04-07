@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import numpy as np
 from experiment import Experiment
 from learner_Q import LearnerQ
+import helper
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -28,25 +30,56 @@ class ExperimentQ(Experiment):
         self.agent_name = 'agent'
         # self.set_s tatus('idle')
 
-    def init_run_exp(self, name, run=None):
+    def _init_task(self, *args):
+        pass
+
+    def _cleanup_task(self, *args):
+        pass
+
+    def _init_run(self, name, run=None):
+        helper.write_stats_file(self.run_stats_file,
+                                'episode',
+                                'steps_total', 'steps_mean',
+                                'reward_total', 'reward_mean',
+                                'epsilon', 'step_count')
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
         self.learner.set_epsilon(self.params['epsilon'])
         self.learner.set_epsilon(self.params['epsilon'])
 
-    def init_task_exp(self, name):
+    def _cleanup_run(self, *args):
         pass
 
-    def cleanup_task_exp(self, name):
+    def _init_episode(self, *args):
         pass
 
-    def cleanup_run_exp(self, name):
-        _logger.debug("Q-values: %s" %
-                      str(self.learner.Q))
+    def _cleanup_episode(self, *args):
+        if self.learner.epsilon > -1 * self.learner.epsilon_change:
+            self.learner.set_epsilon(self.learner.epsilon +
+                                     self.learner.epsilon_change)
 
+    def _get_action_id(self, state, *args):
+        """ Returns the action_id following a policy from the current
+            library from a given state.
+        """
+        return self.learner.get_action(state)
+
+    def _write_test_results(self, episode):
+        helper.write_stats_file(self.run_stats_file,
+                                episode,
+                                sum(self.test_steps),
+                                np.mean(self.test_steps),
+                                sum(self.test_rewards),
+                                np.mean(self.test_rewards),
+                                float("{0:.5f}"
+                                      .format(self.learner.last_epsilon)),
+                                self.run_steps)
+
+    def _specific_updates(self, *args):
+        pass
 
 if __name__ == "__main__":
     params_file = os.path.join(os.getcwd(),
-                               'params_test.yaml')
+                               'params_Q.yaml')
     exp = ExperimentQ(params_file)
     exp.main()

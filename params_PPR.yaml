@@ -6,7 +6,7 @@ log_type: file
 # Level logging output ('DEBUG', 'INFO', etc.)
 log_level: INFO
 # Type of experiment to run
-type: CBPI
+type: PPR
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of an experiment (50)
@@ -19,7 +19,7 @@ max_steps: 100
 test_interval: 10
 # Number of episodes between policy evaluations during training (10)
 policy_eval_interval: 25
-# Number of tests to evaluate policy (100)
+# Number of tests to evaluate policy (1)
 policy_eval_episodes: 1
 # Factor to determine similarity (closeness) as percentage of map diagonal
 policy_eval_factor: 0.3
@@ -32,7 +32,7 @@ policy_eval_conf_stop: 0.2
 # Amount of states which is used to test against other policies
 policy_eval_states: 500
 # Limit of overlap to take new policy into library
-policy_similarity_limit: 0.7
+policy_similarity_limit: 0.25
 # interval when the policy with the lowest policy probability is cut
 # policy_eliminate_interval: 1000
 # at which probability do we start not using a certain policy anymore (0.1)
