@@ -115,7 +115,6 @@ class ExperimentCBPI(Experiment):
 
     def _cleanup_episode(self, task, run, episode):
         if episode % self.params['policy_eval_interval'] == 0:
-
             self.evaluate_current_library(task['name'],
                                           run, episode)
         if self.learner.epsilon > -1 * self.learner.epsilon_change:
@@ -123,11 +122,6 @@ class ExperimentCBPI(Experiment):
                                      self.learner.epsilon_change)
 
     def _init_run(self, task_name, run):
-        helper.write_stats_file(self.run_stats_file,
-                                'episode',
-                                'steps_total', 'steps_mean',
-                                'reward_total', 'reward_mean',
-                                'epsilon', 'step_count')
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
         # TODO: set epsilon to 0.2 if current_library > 1
@@ -230,8 +224,8 @@ class ExperimentCBPI(Experiment):
         """
         # TODO FUTURE: make this more dependent on development
         # of learning progress
-        if self.tau_policy > 1.1 * self.params['tau_policy_change']:
-            self.tau_policy -= self.params['tau_policy_change']
+        if self.tau_policy > 1.1 * self.params['tau_policy_delta']:
+            self.tau_policy -= self.params['tau_policy_delta']
 
     def _get_action_id(self, state, policy_name):
         """ Returns the action_id following a policy from the current
@@ -327,6 +321,7 @@ class ExperimentCBPI(Experiment):
             self.init_episode()
             self.current_library[policy_name]['confidence'] = \
                 self.params['policy_eval_confidence']
+            self.init_episode()
             self.run_episode(
                 test_pos,
                 tuple(self.current_library[task_name]['goal_pos']),
@@ -337,16 +332,8 @@ class ExperimentCBPI(Experiment):
                       (str(self.test_steps)))
         return np.mean(self.test_steps)
 
-    def _write_test_results(self, episode):
-        helper.write_stats_file(self.run_stats_file,
-                                episode,
-                                sum(self.test_steps),
-                                np.mean(self.test_steps),
-                                sum(self.test_rewards),
-                                np.mean(self.test_rewards),
-                                float("{0:.5f}"
-                                      .format(self.learner.last_epsilon)),
-                                self.run_steps)
+    def _write_test_results(self):
+        pass
 
     def _specific_updates(self, policy_name):
         if self.status == 'policy_eval' and \

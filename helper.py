@@ -236,8 +236,16 @@ def plot_task(path_to_dir):
 def plot_policy_choice(path_to_dir, kind='probs'):
     if kind == 'probs':
         ylabel = 'policy probability [%]'
-    else:
+    elif kind == 'absolute':
         ylabel = 'policy mean [steps]'
+    elif kind == 'W':
+        ylabel = 'policy weight [?]'
+    elif kind == 'U':
+        ylabel = 'policy usage [count]'
+    elif kind == 'P':
+        ylabel = 'policy probability [%]'
+    else:
+        pass
     df = pd.read_csv(os.path.join(path_to_dir,
                                   'stats_policy_' + kind + '.csv'))
     plt.figure(figsize=(10, 4), dpi=80)
@@ -256,10 +264,25 @@ def plot_policy_choice_summary(path_to_dir, kind='probs'):
         ylabel = 'policy probability [%]'
         skip = 6
         limit_upper = 1.0
-    else:
+    elif kind == 'absolute':
         ylabel = 'policy mean [steps]'
         skip = 9
         limit_upper = 100.0
+    elif kind == 'W':
+        ylabel = 'policy weight [?]'
+        skip = 2
+        limit_upper = 1.0
+    elif kind == 'U':
+        ylabel = 'policy usage [count]'
+        skip = 2
+        limit_upper = 100.0
+    elif kind == 'P':
+        ylabel = 'policy probability [%]'
+        skip = 2
+        limit_upper = 1.0
+    else:
+        pass
+
     policy_files = glob.glob(
         os.path.join(path_to_dir) + '/' + kind + '_*.csv')
     colors = ['red', 'green', 'blue', 'yellow', 'black', 'brown', 'orange']
