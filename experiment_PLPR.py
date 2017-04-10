@@ -132,20 +132,27 @@ class ExperimentPLPR(Experiment):
             self.current_policy = self.select_policy()
             _logger.debug("Selected policy %s" %
                           (str(self.current_policy)))
+        self.current_W = 0.0
         self.psi = self.params['policy_reuse_probability']
 
     def _cleanup_episode(self):
         if self.learner.epsilon > -1 * self.learner.epsilon_change:
             self.learner.set_epsilon(self.learner.epsilon +
                                      self.learner.epsilon_change)
-        self.tau_policy += self.params['tau_policy_delta']
-
+        """
         self.library[self.current_policy]['W_sum'] += \
             ((self.params['gamma'] ** self.steps_in_episode) *
              self.reward_in_episode)
         self.library[self.current_policy]['W'] = \
             (self.library[self.current_policy]['W_sum'] / self.current_episode)
+        """
+        self.library[self.current_policy]['W'] = \
+            (((self.library[self.current_policy]['W'] *
+               self.library[self.current_policy]['U']) +
+              self.current_W) /
+             (self.library[self.current_policy]['U'] + 1))
         self.library[self.current_policy]['U'] += 1
+        self.tau_policy += self.params['tau_policy_delta']
 
         Ws = [self.current_episode]
         Us = [self.current_episode]
@@ -224,6 +231,9 @@ class ExperimentPLPR(Experiment):
 
     def _specific_updates(self, *args):
         self.psi *= self.params['policy_reuse_probability_decay']
+        self.current_W += \
+            ((self.params['gamma'] ** self.steps_in_episode) *
+             self.reward_in_episode)
 
 
 if __name__ == "__main__":
