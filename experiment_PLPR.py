@@ -74,6 +74,8 @@ class ExperimentPLPR(Experiment):
     def _cleanup_task(self):
         helper.summarize_runs_policy_choice(self.task_dir, 'W')
         helper.plot_policy_choice_summary(self.task_dir, 'W')
+        helper.summarize_runs_policy_choice(self.task_dir, 'W_mean')
+        helper.plot_policy_choice_summary(self.task_dir, 'W_mean')
         helper.summarize_runs_policy_choice(self.task_dir, 'U')
         helper.plot_policy_choice_summary(self.task_dir, 'U')
         helper.summarize_runs_policy_choice(self.task_dir, 'P')
@@ -136,16 +138,19 @@ class ExperimentPLPR(Experiment):
         self.psi = self.params['policy_reuse_probability']
 
     def _cleanup_episode(self):
+        """
         if self.learner.epsilon > -1 * self.learner.epsilon_change:
             self.learner.set_epsilon(self.learner.epsilon +
                                      self.learner.epsilon_change)
-        """
         self.library[self.current_policy]['W_sum'] += \
             ((self.params['gamma'] ** self.steps_in_episode) *
              self.reward_in_episode)
         self.library[self.current_policy]['W'] = \
             (self.library[self.current_policy]['W_sum'] / self.current_episode)
         """
+        self.current_W = \
+            ((self.params['gamma'] ** self.steps_in_episode) *
+             self.reward_in_episode)
         self.library[self.current_policy]['W'] = \
             (((self.library[self.current_policy]['W'] *
                self.library[self.current_policy]['U']) +
@@ -155,14 +160,20 @@ class ExperimentPLPR(Experiment):
         self.tau_policy += self.params['tau_policy_delta']
 
         Ws = [self.current_episode]
+        W_mean = [self.current_episode]
         Us = [self.current_episode]
         Ps = [self.current_episode]
+        W_sum = 0
         for policy in self.library:
+            W_sum += self.library[policy]['W']
             Ws.append(self.library[policy]['W'])
             Us.append(self.library[policy]['U'])
             Ps.append(self.library[policy]['P'])
+        W_mean.append(W_sum / len(self.library))
         helper.write_stats_file(self.run_lib_W_file,
                                 Ws)
+        helper.write_stats_file(self.run_lib_W_mean_file,
+                                W_mean)
         helper.write_stats_file(self.run_lib_U_file,
                                 Us)
         helper.write_stats_file(self.run_lib_P_file,
@@ -175,6 +186,8 @@ class ExperimentPLPR(Experiment):
         self.learner.set_epsilon(self.params['epsilon'])
         self.run_lib_W_file = os.path.join(self.run_dir,
                                            'stats_policy_W.csv')
+        self.run_lib_W_mean_file = os.path.join(self.run_dir,
+                                                'stats_policy_W_mean.csv')
         self.run_lib_U_file = os.path.join(self.run_dir,
                                            'stats_policy_U.csv')
         self.run_lib_P_file = os.path.join(self.run_dir,
@@ -185,6 +198,8 @@ class ExperimentPLPR(Experiment):
         policy_usage_header.insert(0, 'episode')
         helper.write_stats_file(self.run_lib_W_file,
                                 policy_usage_header)
+        helper.write_stats_file(self.run_lib_W_mean_file,
+                                ['episode', 'W_mean'])
         helper.write_stats_file(self.run_lib_U_file,
                                 policy_usage_header)
         helper.write_stats_file(self.run_lib_P_file,
@@ -193,6 +208,7 @@ class ExperimentPLPR(Experiment):
 
     def _cleanup_run(self):
         helper.plot_policy_choice(self.run_dir, 'W')
+        helper.plot_policy_choice(self.run_dir, 'W_mean')
         helper.plot_policy_choice(self.run_dir, 'U')
         helper.plot_policy_choice(self.run_dir, 'P')
         for policy in self.library:
@@ -231,9 +247,9 @@ class ExperimentPLPR(Experiment):
 
     def _specific_updates(self, *args):
         self.psi *= self.params['policy_reuse_probability_decay']
-        self.current_W += \
-            ((self.params['gamma'] ** self.steps_in_episode) *
-             self.reward_in_episode)
+        # self.current_W += \
+        #    ((self.params['gamma'] ** self.steps_in_episode) *
+        #     self.reward_in_episode)
 
 
 if __name__ == "__main__":
