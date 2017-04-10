@@ -4,7 +4,7 @@ import os
 # import math
 import operator
 import collections
-import difflib
+# import difflib
 from experiment import Experiment
 from learner_PLPR import LearnerPLPR
 import helper
@@ -36,7 +36,7 @@ class ExperimentPLPR(Experiment):
         # self.map_size = self.env.get_map_size()
         # self.map_diagonal = math.sqrt(self.map_size[0]**2 +
         #                              self.map_size[1]**2)
-        self.library = {}
+        self.library = collections.OrderedDict()
         if self.params['load_policies']:
             self.fill_library()
 
@@ -49,44 +49,53 @@ class ExperimentPLPR(Experiment):
                                                   'best_Qs.npy'))
             self.library.setdefault(learned_policy['name'], {})['U'] = 0
             self.library.setdefault(learned_policy['name'], {})['W'] = 0.0
+            self.library.setdefault(learned_policy['name'], {})['W_sum'] = 0.0
             self.library.setdefault(learned_policy['name'], {})['P'] = 0.0
 
-    def init_library(self, task_name):
+    def init_library(self):
         """ Adds the initialized policy to the library for learning the
             current task.
         """
         task_index = next(index
                           for (index, d) in enumerate(self.params['tasks'])
-                          if d['name'] == task_name)
-        self.library.setdefault(task_name, {})['goal_pos'] = \
+                          if d['name'] == self.current_task['name'])
+        self.library.setdefault(self.current_task['name'], {})['goal_pos'] = \
             self.params['tasks'][task_index]['goal_pos']
-        self.library.setdefault(task_name, {})['Q'] = self.learner.Q
-        self.library.setdefault(task_name, {})['U'] = 0
-        self.library.setdefault(task_name, {})['W'] = 0.0
-        self.library.setdefault(task_name, {})['P'] = 0.0
+        self.library.setdefault(self.current_task['name'],
+                                {})['Q'] = self.learner.Q
+        self.library.setdefault(self.current_task['name'], {})['U'] = 0
+        self.library.setdefault(self.current_task['name'], {})['W_sum'] = 0.0
+        self.library.setdefault(self.current_task['name'], {})['W'] = 0.0
+        self.library.setdefault(self.current_task['name'], {})['P'] = 0.0
 
-    def _init_task(self, task_name):
-        self.init_library(task_name)
+    def _init_task(self):
+        self.init_library()
 
-    def _cleanup_task(self, task_name):
+    def _cleanup_task(self):
         helper.summarize_runs_policy_choice(self.task_dir, 'W')
         helper.plot_policy_choice_summary(self.task_dir, 'W')
         helper.summarize_runs_policy_choice(self.task_dir, 'U')
         helper.plot_policy_choice_summary(self.task_dir, 'U')
         helper.summarize_runs_policy_choice(self.task_dir, 'P')
         helper.plot_policy_choice_summary(self.task_dir, 'P')
-        self.update_library(task_name)
+        self.update_library()
 
     def update_Ps(self):
         """ Set the probability of being selected for each policy
             in the library. """
-        P = {}
+        P = collections.OrderedDict()
         for policy_name in self.library:
-            P[policy_name] = np.exp(self.tau_policy *
-                                    self.library[policy_name]['W'])
+            try:
+                P[policy_name] = np.exp(self.tau_policy *
+                                        self.library[policy_name]['W'])
+            except:
+                P[policy_name] = 0.0
         P_sum = sum(P.values())
         for policy_name in self.library:
-            self.library[policy_name]['P'] = P[policy_name] / P_sum
+            try:
+                self.library[policy_name]['P'] = P[policy_name] / P_sum
+            except:
+                self.library[policy_name]['P'] = 0.0
 
     def select_policy(self):
         policies = collections.OrderedDict()
@@ -95,6 +104,18 @@ class ExperimentPLPR(Experiment):
         sorted_policies = collections.OrderedDict(sorted(policies.items(),
                                                   key=operator.itemgetter(1),
                                                   reverse=True))
+        policy_pick = self.rng.uniform(0, 1)
+        upper = 0
+        for policy in sorted_policies:
+            lower = upper
+            upper = lower + sorted_policies[policy]
+            if lower <= policy_pick <= upper:
+                return policy
+        # just for safety in case of rounding error in last step, return the
+        # most probable policy
+        for policy in sorted_policies:
+            return policy
+        """
         equally_good = []
         max_P = next(iter(sorted_policies.items()))
         for policy_name in sorted_policies:
@@ -103,26 +124,44 @@ class ExperimentPLPR(Experiment):
             else:
                 break
         return self.rng.choice(equally_good)
+        """
 
     def _init_episode(self):
         if self.status == 'training':
             self.update_Ps()
             self.current_policy = self.select_policy()
+            _logger.debug("Selected policy %s" %
+                          (str(self.current_policy)))
         self.psi = self.params['policy_reuse_probability']
 
-    def _cleanup_episode(self, task, run, episode):
+    def _cleanup_episode(self):
         if self.learner.epsilon > -1 * self.learner.epsilon_change:
             self.learner.set_epsilon(self.learner.epsilon +
                                      self.learner.epsilon_change)
-        self.library[self.current_policy]['W'] = \
-            ((self.library[self.current_policy]['W'] *
-             self.library[self.current_policy]['U'] +
-             self.reward_in_episode) /
-             (self.library[self.current_policy]['U'] + 1))
-        self.library[self.current_policy]['U'] += 1
-        self.tau_policy -= self.params['tau_policy_delta']
+        self.tau_policy += self.params['tau_policy_delta']
 
-    def _init_run(self, task_name, run):
+        self.library[self.current_policy]['W_sum'] += \
+            ((self.params['gamma'] ** self.steps_in_episode) *
+             self.reward_in_episode)
+        self.library[self.current_policy]['W'] = \
+            (self.library[self.current_policy]['W_sum'] / self.current_episode)
+        self.library[self.current_policy]['U'] += 1
+
+        Ws = [self.current_episode]
+        Us = [self.current_episode]
+        Ps = [self.current_episode]
+        for policy in self.library:
+            Ws.append(self.library[policy]['W'])
+            Us.append(self.library[policy]['U'])
+            Ps.append(self.library[policy]['P'])
+        helper.write_stats_file(self.run_lib_W_file,
+                                Ws)
+        helper.write_stats_file(self.run_lib_U_file,
+                                Us)
+        helper.write_stats_file(self.run_lib_P_file,
+                                Ps)
+
+    def _init_run(self):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
         self.learner.set_epsilon(self.params['epsilon'])
@@ -149,6 +188,11 @@ class ExperimentPLPR(Experiment):
         helper.plot_policy_choice(self.run_dir, 'W')
         helper.plot_policy_choice(self.run_dir, 'U')
         helper.plot_policy_choice(self.run_dir, 'P')
+        for policy in self.library:
+            self.library[policy]['W'] = 0.0
+            self.library[policy]['W_sum'] = 0.0
+            self.library[policy]['U'] = 0
+            self.library[policy]['P'] = 0.0
 
     def _get_action_id(self, state, policy_name):
         """ Returns the action_id following a policy from the current
@@ -157,41 +201,28 @@ class ExperimentPLPR(Experiment):
         return self.learner.get_action(state,
                                        self.library,
                                        policy_name,
+                                       self.current_task['name'],
                                        self.status,
                                        self.psi)
 
-    def update_library(self, policy_name):
-        # TODO: adapt to policy reuse
-        self.set_status('library_eval', policy_name, 0, 0)
+    def update_library(self):
+        self.set_status('library_eval')
         Ws = []
         for policy in self.library:
-            if not policy == policy_name:
-                Ws.append(self.library[policy]['W'])
+            # if not policy == self.current_task['name']:
+            Ws.append(self.library[policy]['W'])
         if max(Ws) >= (self.params['policy_library_simimilarity'] *
-                       self.library[policy_name]['W']):
+                       self.library[self.current_task['name']]['W']):
             # remove current task from library
-            _logger.info('Not adding %s' % str(policy_name))
-            del self.library[policy_name]
+            _logger.info('Not adding %s' % str(self.current_task['name']))
+            del self.library[self.current_task['name']]
         _logger.info('Library (size=%s): %s' % (str(len(self.library)),
                                                 str(self.library.keys())))
 
     def _write_test_results(self):
         pass
 
-    def _specific_updates(self, policy_name):
-        Ws = [episode]
-        Us = [episode]
-        Ps = [episode]
-        for policy in self.library:
-            Ws.append(self.library[policy]['W'])
-            Us.append(self.library[policy]['U'])
-            Ps.append(self.library[policy]['P'])
-        helper.write_stats_file(self.run_lib_W_file,
-                                Ws)
-        helper.write_stats_file(self.run_lib_U_file,
-                                Us)
-        helper.write_stats_file(self.run_lib_P_file,
-                                Ps)
+    def _specific_updates(self, *args):
         self.psi *= self.params['policy_reuse_probability_decay']
 
 

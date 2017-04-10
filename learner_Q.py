@@ -78,27 +78,37 @@ class LearnerQ(object):
         """
         explore_propability = self.rng.uniform(0, 1)
         if explore_propability < self.epsilon:
+            _logger.debug("### Random action (%s < %s) ###" %
+                          (str(explore_propability), str(self.epsilon)))
             return self.rng.randint(0, self.action_count)
         else:
-            Qs = []
-            for action in range(0, self.action_count):
-                try:
-                    Qs.append((action, self.Q[state, action]))
-                except KeyError:
-                    pass
-            _logger.debug("Q-values in %s: ) = %s" %
-                          (str(state), str(Qs)))
-            if len(Qs) > 0:
-                sorted_Qs = sorted(Qs, key=operator.itemgetter(1),
-                                   reverse=True)
-                max_Qs = []
-                max_Qs.append(sorted_Qs[0][0])
-                for i in range(1, len(sorted_Qs)):
-                    if sorted_Qs[i][1] == sorted_Qs[0][1]:
-                        max_Qs.append(sorted_Qs[i][0])
-                return self.rng.choice(max_Qs)
-            else:
-                return self.rng.randint(0, self.action_count)
+            _logger.debug("### Selecting action e-greedily "
+                          "(%s > %s) ###" % (str(explore_propability),
+                                             str(self.epsilon)))
+            return self.greedy(self.Q, state)
+
+    def greedy(self, policy_Qs, state):
+        """ Follows a greedy strategy selcting always the action with
+            the highest Q-value. """
+        Qs = []
+        for action in range(0, self.action_count):
+            try:
+                Qs.append((action, policy_Qs[state, action]))
+            except KeyError:
+                pass
+        _logger.debug("Q-values in %s: %s" %
+                      (str(state), str(Qs)))
+        if len(Qs) > 0:
+            sorted_Qs = sorted(Qs, key=operator.itemgetter(1),
+                               reverse=True)
+            max_Qs = []
+            max_Qs.append(sorted_Qs[0][0])
+            for i in range(1, len(sorted_Qs)):
+                if sorted_Qs[i][1] == sorted_Qs[0][1]:
+                    max_Qs.append(sorted_Qs[i][0])
+            return self.rng.choice(max_Qs)
+        else:
+            return self.rng.randint(0, self.action_count)
 
     def load_Qs(self, source):
         return np.load(source).item()

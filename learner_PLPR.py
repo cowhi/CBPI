@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy as np
-import operator
 from learner_Q import LearnerQ
 import logging
 _logger = logging.getLogger(__name__)
@@ -16,71 +15,31 @@ class LearnerPLPR(LearnerQ):
                                           alpha, gamma,
                                           source, rng)
 
-    def get_action(self, state, library=None, policy_name=None,
+    def get_action(self, state, library=None, policy_name=None, task_name=None,
                    status='training', psi=0.0):
-        """ Get an action according to current policy during testing  """
-        if status in ['testing', 'library_eval']:
-            Qs = []
-            action_values = []
-            for action in range(0, self.action_count):
-                try:
-                    action_values.append(
-                        library[policy_name]['Q'][state, action])
-                except KeyError:
-                    action_values.append(0.0)
-            if sum(action_values) == 0.0:
-                if status == 'library_eval':
-                    return 0
-                return self.rng.randint(0, self.action_count)
-            return np.argmax(action_values)
+        """ Get an action according to current policy during testing and when
+           the chosen policy is the policy for the current task. """
+        if status in ['testing'] or \
+                policy_name == task_name:
+            _logger.debug("### Selecting policy %s greedily ###" %
+                          str(policy_name))
+            return self.greedy(self.Q, state)
         """ Get an action using the policy reuse strategy. """
         reuse_probability = self.rng.uniform(0, 1)
         if reuse_probability < psi:
-            _logger.debug("### Reusing policy ###")
-            Qs = []
-            for action in range(0, self.action_count):
-                try:
-                    Qs.append((action,
-                               library[policy_name]['Q'][state, action]))
-                except KeyError:
-                    pass
-            _logger.debug("Q-values in %s: ) = %s" %
-                          (str(state), str(Qs)))
-            if len(Qs) > 0:
-                sorted_Qs = sorted(Qs, key=operator.itemgetter(1),
-                                   reverse=True)
-                max_Qs = []
-                max_Qs.append(sorted_Qs[0][0])
-                for i in range(1, len(sorted_Qs)):
-                    if sorted_Qs[i][1] == sorted_Qs[0][1]:
-                        max_Qs.append(sorted_Qs[i][0])
-                return self.rng.choice(max_Qs)
-            else:
-                return self.rng.randint(0, self.action_count)
+            _logger.debug("### Reusing policy %s greedily (%s < %s)###" %
+                          (str(policy_name), str(reuse_probability), str(psi)))
+            return self.greedy(library[policy_name]['Q'], state)
         else:
             explore_propability = self.rng.uniform(0, 1)
-            if explore_propability < self.epsilon:
-                _logger.debug("### Random action ###")
+            epsilon = 1.0 - psi
+            if explore_propability < epsilon:
+                _logger.debug("### Random action (%s < %s) ###" %
+                              (str(explore_propability), str(epsilon)))
                 return self.rng.randint(0, self.action_count)
             else:
-                _logger.debug("### Selecting action ###")
-                Qs = []
-                for action in range(0, self.action_count):
-                    try:
-                        Qs.append((action,
-                                   self.Q[state, action]))
-                    except KeyError:
-                        pass
-                _logger.debug("Q-values in %s: ) = %s" %
-                              (str(state), str(Qs)))
-                if len(Qs) > 0:
-                    sorted_Qs = sorted(Qs, key=operator.itemgetter(1),
-                                       reverse=True)
-                    max_Qs = []
-                    max_Qs.append(sorted_Qs[0][0])
-                    for i in range(1, len(sorted_Qs)):
-                        if sorted_Qs[i][1] == sorted_Qs[0][1]:
-                            max_Qs.append(sorted_Qs[i][0])
-                    return self.rng.choice(max_Qs)
-                else:
-                    return self.rng.randint(0, self.action_count)
+                _logger.debug("### Selecting policy %s e-greedily "
+                              "(%s > %s) ###" % (str(task_name),
+                                                 str(explore_propability),
+                                                 str(epsilon)))
+                return self.greedy(self.Q, state)

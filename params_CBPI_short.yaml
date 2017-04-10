@@ -10,9 +10,9 @@ type: CBPI
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of an experiment (50)
-runs: 2
+runs: 4
 # Number of training episodes within an experiment (1000)
-episodes: 500
+episodes: 1000
 # Maximum number of steps in one episode
 max_steps: 100
 # Number of episodes between testing episodes (1)

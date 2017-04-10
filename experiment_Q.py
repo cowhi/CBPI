@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
-import numpy as np
+# import numpy as np
 from experiment import Experiment
 from learner_Q import LearnerQ
-import helper
+# import helper
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class ExperimentQ(Experiment):
     def _cleanup_task(self, *args):
         pass
 
-    def _init_run(self, name, run=None):
+    def _init_run(self):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
         self.learner.set_epsilon(self.params['epsilon'])

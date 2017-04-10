@@ -48,6 +48,9 @@ class Experiment(object):
                              rng=self.rng)
         # self.current_lib rary = None
         # self.lib rary = None
+        self.current_task = 'None'
+        self.current_run = 0
+        self.current_episode = 0
 
     def get_parameter(self, file_name):
         path_to_file = os.path.join(os.getcwd(), file_name)
@@ -90,11 +93,11 @@ class Experiment(object):
                                 filemode='w')
         return logging.getLogger(__name__)
 
-    def set_status(self, status, task_name=None, run=None, episode=None):
+    def set_status(self, status):
         self.status = status
         _logger.info("[T:%s,R:%s,E:%s] %s" %
-                      (str(task_name), str(run),
-                       str(episode), str(self.status)))
+                     (str(self.current_task['name']), str(self.current_run),
+                      str(self.current_episode), str(self.status)))
 
     def init_episode(self):
         self.steps_in_episode = 0
@@ -105,16 +108,16 @@ class Experiment(object):
     def _init_episode(self):
         pass
 
-    def cleanup_episode(self, task, run, episode):
-        self._cleanup_episode(task, run, episode)
+    def cleanup_episode(self):
+        self._cleanup_episode()
 
     @abc.abstractmethod
     def _cleanup_episode(self):
         pass
 
-    def init_run(self, task_name, run):
-        _logger.info("..... Starting run %s" % str(run))
-        run_dir = os.path.join(self.task_dir, 'run_' + str(run))
+    def init_run(self):
+        _logger.info("..... Starting run %s" % str(self.current_run))
+        run_dir = os.path.join(self.task_dir, 'run_' + str(self.current_run))
         self.run_dir = helper.create_dir(run_dir)
         # Create run stats file: run_stats.csv
         self.run_stats_file = os.path.join(self.run_dir,
@@ -125,42 +128,43 @@ class Experiment(object):
                                 'steps_total', 'steps_mean',
                                 'reward_total', 'reward_mean',
                                 'epsilon', 'step_count')
-        self._init_run(task_name, run)
+        self._init_run()
 
     @abc.abstractmethod
     def _init_run(self):
         pass
 
-    def cleanup_run(self, run):
-        self.save_best_episode(run)
+    def cleanup_run(self):
+        self.save_best_episode()
         helper.delete_dirs(self.run_dir)
         helper.plot_run(self.run_dir)
         self._cleanup_run()
-        _logger.info("..... Finished run %s" % str(run))
+        _logger.info("..... Finished run %s" % str(self.current_run))
 
     @abc.abstractmethod
     def _cleanup_run(self):
         pass
 
-    def init_task(self, name):
-        _logger.info("##### Starting task %s" % str(name))
-        task_dir = os.path.join(self.exp_dir, 'task_' + name)
+    def init_task(self):
+        _logger.info("##### Starting task %s" %
+                     str(self.current_task['name']))
+        task_dir = os.path.join(self.exp_dir, 'task_' +
+                                self.current_task['name'])
         self.task_dir = helper.create_dir(task_dir)
-        self.current_task_name = name
-        self._init_task(name)
+        self._init_task()
 
     @abc.abstractmethod
-    def _init_task(self, name):
+    def _init_task(self):
         pass
 
-    def cleanup_task(self, name):
+    def cleanup_task(self):
         helper.plot_runs(self.task_dir)
         helper.summarize_runs_results(self.task_dir)
         helper.plot_task(self.task_dir)
-        self.save_best_run(name)
-        self._cleanup_task(name)
+        self.save_best_run()
+        self._cleanup_task()
         # self.set_s tatus('idle')
-        _logger.info("##### Finished task %s" % str(name))
+        _logger.info("##### Finished task %s" % str(self.current_task['name']))
 
     @abc.abstractmethod
     def _cleanup_task(self):
@@ -177,9 +181,9 @@ class Experiment(object):
     def _specific_updates(self):
         pass
 
-    def write_test_results(self, episode):
+    def write_test_results(self):
         helper.write_stats_file(self.run_stats_file,
-                                episode,
+                                self.current_episode,
                                 sum(self.test_steps),
                                 np.mean(self.test_steps),
                                 sum(self.test_rewards),
@@ -193,36 +197,33 @@ class Experiment(object):
     def _write_test_results(self):
         pass
 
-    def run_tests(self, task, run, episode):
+    def run_tests(self):
         self.learner.set_epsilon(0.0)
         self.episode_dir = os.path.join(self.run_dir,
-                                        'episode_' + str(episode))
+                                        'episode_' + str(self.current_episode))
         self.episode_dir = helper.create_dir(self.episode_dir)
         self.test_steps = []
         self.test_rewards = []
         for test_pos in self.params['test_positions']:
             self.init_episode()
             self.run_episode(test_pos,
-                             tuple(task['goal_pos']),
-                             task['name'])
+                             tuple(self.current_task['goal_pos']),
+                             self.current_task['name'])
             self.test_steps.append(self.steps_in_episode)
             self.test_rewards.append(self.reward_in_episode)
-        self.write_test_results(episode)
+        self.write_test_results()
         self.learner.save_Qs(os.path.join(self.episode_dir,
                                           'Qs.npy'))
         # Make video from random position
         if self.params['visual']:
-            self.set_status('recording', task['name'], run, episode)
+            self.set_status('recording')
             self.init_episode()
             self.run_episode(
-                self.env.get_random_state(tuple(task['goal_pos'])),
-                tuple(task['goal_pos']),
-                task['name'])
+                self.env.get_random_state(
+                    tuple(self.current_task['goal_pos'])),
+                tuple(self.current_task['goal_pos']),
+                self.current_task['name'])
         self.learner.set_epsilon(self.learner.last_epsilon)
-
-        # if not episode % self.params['policy_eval_interval'] == 0 or \
-        #        episode == 0:
-        #    self.set_status('training', task['name'], run, episode)
 
     def run_episode(self, agent_pos, goal_pos, policy_name=None):
         """
@@ -246,13 +247,12 @@ class Experiment(object):
         if self.status == 'recording':
             self.env.draw_frame()
             self.env.save_current_frame(self.episode_dir)
-        # if self.status in ['testing', 'policy_eval']:
         self.steps_in_episode += 1
         self.reward_in_episode += reward
         if self.status == 'training' and not self.env.episode_ended:
             self.learner.update_Q(state[0:2], action_id,
                                   reward, state_prime[0:2])
-        self._specific_updates(0, policy_name)
+        self._specific_updates(policy_name)
         while not self.env.episode_ended:
             state = state_prime
             action_id = self._get_action_id(state, policy_name)
@@ -278,12 +278,12 @@ class Experiment(object):
         if self.env.visual and self.status == 'recording':
             self.env.make_video(self.episode_dir)
 
-    def save_best_episode(self, run):
+    def save_best_episode(self):
         df = pd.read_csv(os.path.join(self.run_dir, 'stats_run.csv'))
         least_steps_row = df.ix[df['steps_mean'].idxmin()]
         run_best_file = os.path.join(self.run_dir, 'stats_run_best.csv')
         headers = ['run']
-        content = [int(run)]
+        content = [int(self.current_run)]
         for column in df:
             headers.append(str(column))
             content.append(least_steps_row[column])
@@ -296,7 +296,7 @@ class Experiment(object):
                          os.path.join(self.run_dir,
                                       'best_Qs.npy'))
 
-    def save_best_run(self, name):
+    def save_best_run(self):
         # Save best Q-table for current task
         df = pd.read_csv(os.path.join(self.task_dir,
                                       'run_' + str(1),
@@ -309,7 +309,7 @@ class Experiment(object):
         least_steps_row = df.ix[df['steps_mean'].idxmin()]
         task_best_file = os.path.join(self.task_dir, 'stats_task_best.csv')
         headers = ['task']
-        content = [str(name)]
+        content = [str(self.current_task['name'])]
         for column in df:
             headers.append(str(column))
             content.append(least_steps_row[column])
@@ -325,28 +325,29 @@ class Experiment(object):
     def main(self):
         for task in self.params['tasks']:
             self.current_task = task
-            self.init_task(task['name'])
+            self.init_task()
             for run in range(1, self.params['runs'] + 1):
                 self.current_run = run
-                self.init_run(task['name'], run)
                 self.current_episode = 0
-                self.set_status('testing', task['name'],
-                                run, self.current_episode)
-                self.run_tests(task, run, self.current_episode)
+                self.current_policy = self.current_task['name']
+                self.init_run()
+                self.set_status('testing')
+                self.run_tests()
                 for episode in range(1, self.params['episodes'] + 1):
                     self.current_episode = episode
-                    self.set_status('training', task['name'], run, episode)
+                    self.set_status('training')
                     self.init_episode()
                     self.run_episode(
-                        self.env.get_random_state(tuple(task['goal_pos'])),
-                        tuple(task['goal_pos']),
-                        task['name'])
+                        self.env.get_random_state(
+                            tuple(self.current_task['goal_pos'])),
+                        tuple(self.current_task['goal_pos']),
+                        self.current_policy)
                     if episode % self.params['test_interval'] == 0:
-                        self.set_status('testing', task['name'], run, episode)
-                        self.run_tests(task, run, episode)
-                    self.cleanup_episode(task, run, episode)
-                self.cleanup_run(run)
-            self.cleanup_task(task['name'])
+                        self.set_status('testing')
+                        self.run_tests()
+                    self.cleanup_episode()
+                self.cleanup_run()
+            self.cleanup_task()
         _logger.info("Done")
 
 

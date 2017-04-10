@@ -239,7 +239,7 @@ def plot_policy_choice(path_to_dir, kind='probs'):
     elif kind == 'absolute':
         ylabel = 'policy mean [steps]'
     elif kind == 'W':
-        ylabel = 'policy weight [?]'
+        ylabel = 'Reuse gain [gain per episode]'
     elif kind == 'U':
         ylabel = 'policy usage [count]'
     elif kind == 'P':
@@ -269,13 +269,13 @@ def plot_policy_choice_summary(path_to_dir, kind='probs'):
         skip = 9
         limit_upper = 100.0
     elif kind == 'W':
-        ylabel = 'policy weight [?]'
+        ylabel = 'Reuse gain [gain per episode]'
         skip = 2
         limit_upper = 1.0
     elif kind == 'U':
         ylabel = 'policy usage [count]'
         skip = 2
-        limit_upper = 100.0
+        limit_upper = 1000.0
     elif kind == 'P':
         ylabel = 'policy probability [%]'
         skip = 2

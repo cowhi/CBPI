@@ -10,7 +10,7 @@ type: Q
 # Seed for random number generator
 random_seed: 123
 # Number of repetitions of one task
-runs: 2
+runs: 4
 # Number of training episodes within an experiment
 episodes: 1000
 # Maximum number of steps in one episode
