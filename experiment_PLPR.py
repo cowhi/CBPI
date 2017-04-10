@@ -138,46 +138,50 @@ class ExperimentPLPR(Experiment):
         self.psi = self.params['policy_reuse_probability']
 
     def _cleanup_episode(self):
-        """
-        if self.learner.epsilon > -1 * self.learner.epsilon_change:
-            self.learner.set_epsilon(self.learner.epsilon +
-                                     self.learner.epsilon_change)
-        self.library[self.current_policy]['W_sum'] += \
-            ((self.params['gamma'] ** self.steps_in_episode) *
-             self.reward_in_episode)
-        self.library[self.current_policy]['W'] = \
-            (self.library[self.current_policy]['W_sum'] / self.current_episode)
-        """
-        self.current_W = \
-            ((self.params['gamma'] ** self.steps_in_episode) *
-             self.reward_in_episode)
-        self.library[self.current_policy]['W'] = \
-            (((self.library[self.current_policy]['W'] *
-               self.library[self.current_policy]['U']) +
-              self.current_W) /
-             (self.library[self.current_policy]['U'] + 1))
-        self.library[self.current_policy]['U'] += 1
-        self.tau_policy += self.params['tau_policy_delta']
+        if self.status in ['training']:
+            if self.learner.epsilon > -1 * self.learner.epsilon_change:
+                self.learner.set_epsilon(self.learner.epsilon +
+                                         self.learner.epsilon_change)
+            """
+            self.library[self.current_policy]['W_sum'] += \
+                ((self.params['gamma'] ** self.steps_in_episode) *
+                 self.reward_in_episode)
+            self.library[self.current_policy]['W'] = \
+                (self.library[self.current_policy]['W_sum'] /
+                 self.current_episode)
+            """
+            self.current_W = \
+                ((self.params['gamma'] ** self.steps_in_episode) *
+                 self.reward_in_episode)
+            # print('%s: current_W = %s' % (str(self.current_episode),
+            #                              str(self.current_W)))
+            self.library[self.current_policy]['W'] = \
+                (((self.library[self.current_policy]['W'] *
+                   self.library[self.current_policy]['U']) +
+                  self.current_W) /
+                 (self.library[self.current_policy]['U'] + 1))
+            self.library[self.current_policy]['U'] += 1
+            self.tau_policy += self.params['tau_policy_delta']
 
-        Ws = [self.current_episode]
-        W_mean = [self.current_episode]
-        Us = [self.current_episode]
-        Ps = [self.current_episode]
-        W_sum = 0
-        for policy in self.library:
-            W_sum += self.library[policy]['W']
-            Ws.append(self.library[policy]['W'])
-            Us.append(self.library[policy]['U'])
-            Ps.append(self.library[policy]['P'])
-        W_mean.append(W_sum / len(self.library))
-        helper.write_stats_file(self.run_lib_W_file,
-                                Ws)
-        helper.write_stats_file(self.run_lib_W_mean_file,
-                                W_mean)
-        helper.write_stats_file(self.run_lib_U_file,
-                                Us)
-        helper.write_stats_file(self.run_lib_P_file,
-                                Ps)
+            Ws = [self.current_episode]
+            W_mean = [self.current_episode]
+            Us = [self.current_episode]
+            Ps = [self.current_episode]
+            W_sum = 0
+            for policy in self.library:
+                W_sum += self.library[policy]['W']
+                Ws.append(self.library[policy]['W'])
+                Us.append(self.library[policy]['U'])
+                Ps.append(self.library[policy]['P'])
+            W_mean.append(W_sum / len(self.library))
+            helper.write_stats_file(self.run_lib_W_file,
+                                    Ws)
+            helper.write_stats_file(self.run_lib_W_mean_file,
+                                    W_mean)
+            helper.write_stats_file(self.run_lib_U_file,
+                                    Us)
+            helper.write_stats_file(self.run_lib_P_file,
+                                    Ps)
 
     def _init_run(self):
         self.learner.init_Q(states=self.env.get_all_states(),
