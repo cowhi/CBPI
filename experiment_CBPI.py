@@ -117,15 +117,16 @@ class ExperimentCBPI(Experiment):
     def _cleanup_episode(self):
         if self.current_episode % self.params['policy_eval_interval'] == 0:
             self.evaluate_current_library()
-        if self.learner.epsilon > -1 * self.learner.epsilon_change:
-            self.learner.set_epsilon(self.learner.epsilon +
-                                     self.learner.epsilon_change)
+            self.importance_limit += \
+                self.params['policy_importance_limit_delta']
+        if self.status == 'training':
+            if self.learner.epsilon > -1 * self.learner.epsilon_change:
+                self.learner.set_epsilon(self.learner.epsilon +
+                                         self.learner.epsilon_change)
 
     def _init_run(self):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
-        # TODO: set epsilon to 0.2 if current_library > 1
-        # if self.current_task['name'] == 'omega':
         if len(self.current_library) > 1:
             self.learner.set_epsilon(0.2)
             self.learner.set_epsilon(0.2)
@@ -143,6 +144,7 @@ class ExperimentCBPI(Experiment):
         helper.write_stats_file(self.run_lib_absolute_file,
                                 policy_usage_header)
         self.tau_policy = self.params['tau_policy']
+        self.importance_limit = self.params['policy_importance_limit']
         for policy_name in self.current_library:
             self.current_library[policy_name]['active'] = True
         self.active_policies = len(self.task_policies)
@@ -193,7 +195,7 @@ class ExperimentCBPI(Experiment):
                     if self.active_policies > 1:
                         self.current_library[policy_name]['weight'] /= divider
                         if self.current_library[policy_name]['weight'] < \
-                                self.params['policy_importance_limit'] and not\
+                                self.importance_limit and not\
                                 policy_name == self.current_task['name']:
                             self.current_library[policy_name]['active'] = False
                             self.active_policies -= 1
@@ -218,14 +220,11 @@ class ExperimentCBPI(Experiment):
     def update_train_settings(self):
         """ Changes the temperature value for the softmax when calculating
             the weights for each policy.
-
-            Also updates the current library if a policy becomes
-            too unimportant.
         """
-        # TODO FUTURE: make this more dependent on development
-        # of learning progress
-        if self.tau_policy > 1.1 * self.params['tau_policy_delta']:
-            self.tau_policy -= self.params['tau_policy_delta']
+        # if self.tau_policy > 1.1 * self.params['tau_policy_delta']:
+        #    self.tau_policy -= self.params['tau_policy_delta']
+        self.tau_policy += self.params['tau_policy_delta']
+        # TODO: Make 'tau_policy_delta' dependent on gradient ??!
 
     def _get_action_id(self, state, policy_name):
         """ Returns the action_id following a policy from the current
@@ -240,9 +239,13 @@ class ExperimentCBPI(Experiment):
     def get_policy_weight(self, policy_results_mean):
         """ Returns the weight for the used policy.
         """
-        return np.exp(-1.0 * (policy_results_mean /
-                      self.tau_policy) /
-                      len(self.params['test_positions']))
+        # return np.exp(-1.0 * (policy_results_mean /
+        #              self.tau_policy) /
+        #              len(self.params['test_positions']))
+        # return np.exp(-1.0 * (policy_results_mean /
+        #              self.tau_policy))
+        return np.exp(-1.0 * (policy_results_mean *
+                      self.tau_policy))
 
     def update_library(self):
         self.set_status('library_eval')
@@ -316,7 +319,6 @@ class ExperimentCBPI(Experiment):
         _logger.debug('Eval %s with: %s' % (str(self.current_task['name']),
                                             str(policy_name)))
         for test_pos in self.params['test_positions']:
-            self.init_episode()
             self.current_library[policy_name]['confidence'] = \
                 self.params['policy_eval_confidence']
             self.init_episode()

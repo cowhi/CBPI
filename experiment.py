@@ -46,8 +46,6 @@ class Experiment(object):
                              max_steps=self.params['max_steps'],
                              visual=self.params['visual'],
                              rng=self.rng)
-        # self.current_lib rary = None
-        # self.lib rary = None
         self.current_task = 'None'
         self.current_run = 0
         self.current_episode = 0
@@ -333,19 +331,20 @@ class Experiment(object):
                 self.init_run()
                 self.set_status('testing')
                 self.run_tests()
+                self.set_status('training')
                 for episode in range(1, self.params['episodes'] + 1):
                     self.current_episode = episode
-                    self.set_status('training')
                     self.init_episode()
                     self.run_episode(
                         self.env.get_random_state(
                             tuple(self.current_task['goal_pos'])),
                         tuple(self.current_task['goal_pos']),
                         self.current_policy)
+                    self.cleanup_episode()
                     if episode % self.params['test_interval'] == 0:
                         self.set_status('testing')
                         self.run_tests()
-                    self.cleanup_episode()
+                        self.set_status('training')
                 self.cleanup_run()
             self.cleanup_task()
         _logger.info("Done")

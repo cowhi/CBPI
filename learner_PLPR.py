@@ -14,32 +14,35 @@ class LearnerPLPR(LearnerQ):
                                           epsilon, epsilon_change,
                                           alpha, gamma,
                                           source, rng)
+        # self.random_test = True
 
     def get_action(self, state, library=None, policy_name=None, task_name=None,
                    status='training', psi=0.0):
+        # if self.random_test:
+        #    return self.rng.randint(0, self.action_count)
         """ Get an action according to current policy during testing and when
            the chosen policy is the policy for the current task. """
         if status in ['testing'] or \
-                policy_name == task_name:
+                (policy_name == task_name and len(library) > 1):
             _logger.debug("### Selecting policy %s greedily ###" %
                           str(policy_name))
             return self.greedy(self.Q, state)
         """ Get an action using the policy reuse strategy. """
         reuse_probability = self.rng.uniform(0, 1)
-        if reuse_probability < psi:
+        if reuse_probability < psi and len(library) > 1:
             _logger.debug("### Reusing policy %s greedily (%s < %s)###" %
                           (str(policy_name), str(reuse_probability), str(psi)))
             return self.greedy(library[policy_name]['Q'], state)
         else:
             explore_propability = self.rng.uniform(0, 1)
-            epsilon = 1.0 - psi
-            if explore_propability < epsilon:
+            # epsilon = 1.0 - psi
+            if explore_propability < self.epsilon:
                 _logger.debug("### Random action (%s < %s) ###" %
-                              (str(explore_propability), str(epsilon)))
+                              (str(explore_propability), str(self.epsilon)))
                 return self.rng.randint(0, self.action_count)
             else:
                 _logger.debug("### Selecting policy %s e-greedily "
                               "(%s > %s) ###" % (str(task_name),
                                                  str(explore_propability),
-                                                 str(epsilon)))
+                                                 str(self.epsilon)))
                 return self.greedy(self.Q, state)

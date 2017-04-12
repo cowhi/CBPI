@@ -117,67 +117,56 @@ class ExperimentPLPR(Experiment):
         # most probable policy
         for policy in sorted_policies:
             return policy
-        """
-        equally_good = []
-        max_P = next(iter(sorted_policies.items()))
-        for policy_name in sorted_policies:
-            if sorted_policies[policy_name] == max_P[1]:
-                equally_good.append(policy_name)
-            else:
-                break
-        return self.rng.choice(equally_good)
-        """
 
     def _init_episode(self):
+        self.current_W = 0.0
+        self.psi = self.params['policy_reuse_probability']
         if self.status == 'training':
             self.update_Ps()
             self.current_policy = self.select_policy()
-            _logger.debug("Selected policy %s" %
-                          (str(self.current_policy)))
-        self.current_W = 0.0
-        self.psi = self.params['policy_reuse_probability']
+            _logger.debug('%s: current_W=%s, W=%s, U=%s, tau=%s' %
+                          (str(self.current_policy),
+                           str(self.current_W),
+                           str(self.library[self.current_policy]['W']),
+                           str(self.library[self.current_policy]['U']),
+                           str(self.tau_policy)))
 
     def _cleanup_episode(self):
-        """
-        if self.learner.epsilon > -1 * self.learner.epsilon_change:
-            self.learner.set_epsilon(self.learner.epsilon +
-                                     self.learner.epsilon_change)
-        self.library[self.current_policy]['W_sum'] += \
-            ((self.params['gamma'] ** self.steps_in_episode) *
-             self.reward_in_episode)
-        self.library[self.current_policy]['W'] = \
-            (self.library[self.current_policy]['W_sum'] / self.current_episode)
-        """
-        self.current_W = \
-            ((self.params['gamma'] ** self.steps_in_episode) *
-             self.reward_in_episode)
-        self.library[self.current_policy]['W'] = \
-            (((self.library[self.current_policy]['W'] *
-               self.library[self.current_policy]['U']) +
-              self.current_W) /
-             (self.library[self.current_policy]['U'] + 1))
-        self.library[self.current_policy]['U'] += 1
-        self.tau_policy += self.params['tau_policy_delta']
-
-        Ws = [self.current_episode]
-        W_mean = [self.current_episode]
-        Us = [self.current_episode]
-        Ps = [self.current_episode]
-        W_sum = 0
-        for policy in self.library:
-            W_sum += self.library[policy]['W']
-            Ws.append(self.library[policy]['W'])
-            Us.append(self.library[policy]['U'])
-            Ps.append(self.library[policy]['P'])
-        W_mean.append(W_sum / len(self.library))
-        helper.write_stats_file(self.run_lib_W_file,
-                                Ws)
-        helper.write_stats_file(self.run_lib_W_mean_file,
-                                W_mean)
-        helper.write_stats_file(self.run_lib_U_file,
-                                Us)
-        helper.write_stats_file(self.run_lib_P_file,
-                                Ps)
+        if self.status == 'training':
+            if self.learner.epsilon > -1 * self.learner.epsilon_change:
+                self.learner.set_epsilon(self.learner.epsilon +
+                                         self.learner.epsilon_change)
+            self.current_W = \
+                ((self.params['gamma'] ** self.steps_in_episode) *
+                 self.reward_in_episode)
+            self.library[self.current_policy]['W'] = \
+                (((self.library[self.current_policy]['W'] *
+                   self.library[self.current_policy]['U']) +
+                  self.current_W) /
+                 (self.library[self.current_policy]['U'] + 1))
+            self.library[self.current_policy]['U'] += 1
+            self.tau_policy += self.params['tau_policy_delta']
+            _logger.debug('%s: current_W=%s, W=%s, U=%s, tau=%s' %
+                          (str(self.current_policy),
+                           str(self.current_W),
+                           str(self.library[self.current_policy]['W']),
+                           str(self.library[self.current_policy]['U']),
+                           str(self.tau_policy)))
+            Ws = [self.current_episode]
+            W_mean = [self.current_episode]
+            Us = [self.current_episode]
+            Ps = [self.current_episode]
+            W_sum = 0
+            for policy in self.library:
+                W_sum += self.library[policy]['W']
+                Ws.append(self.library[policy]['W'])
+                Us.append(self.library[policy]['U'])
+                Ps.append(self.library[policy]['P'])
+            W_mean.append(W_sum / len(self.library))
+            helper.write_stats_file(self.run_lib_W_file, Ws)
+            helper.write_stats_file(self.run_lib_W_mean_file, W_mean)
+            helper.write_stats_file(self.run_lib_U_file, Us)
+            helper.write_stats_file(self.run_lib_P_file, Ps)
 
     def _init_run(self):
         self.learner.init_Q(states=self.env.get_all_states(),
@@ -246,10 +235,8 @@ class ExperimentPLPR(Experiment):
         pass
 
     def _specific_updates(self, *args):
-        self.psi *= self.params['policy_reuse_probability_decay']
-        # self.current_W += \
-        #    ((self.params['gamma'] ** self.steps_in_episode) *
-        #     self.reward_in_episode)
+        if self.status == 'training':
+            self.psi *= self.params['policy_reuse_probability_decay']
 
 
 if __name__ == "__main__":

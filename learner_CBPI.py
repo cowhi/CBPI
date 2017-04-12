@@ -18,7 +18,10 @@ class LearnerCBPI(LearnerQ):
 
     def get_action(self, state, library=None, eval_policy=None,
                    status='training', tau=0.1):
-        if status in ['testing', 'library_eval']:
+        if status in ['testing']:
+            # return self.greedy(library[eval_policy]['Q'], state)
+            return self.greedy(self.Q, state)
+        if status in ['library_eval']:
             return self.greedy(library[eval_policy]['Q'], state)
         if status in ['policy_eval']:
             doubt = self.rng.uniform(0, 1)
@@ -29,68 +32,77 @@ class LearnerCBPI(LearnerQ):
         # if training
         explore_propability = self.rng.uniform(0, 1)
         if explore_propability < self.epsilon:
-            _logger.debug("### Random action ###")
+            _logger.debug("### Random action (%s < %s) ###" %
+                          (str(explore_propability), str(self.epsilon)))
             return self.rng.randint(0, self.action_count)
         else:
-            _logger.debug("### Selecting action ###")
+            _logger.debug("### Selecting action according to "
+                          "inferred strategy "
+                          "(%s > %s) ###" % (str(explore_propability),
+                                             str(self.epsilon)))
             return self.inferred(library, state, tau)
 
     def inferred(self, library, state, tau):
-        library_probs = []
-        for policy in library:
-            if library[policy]['active']:
-                Qs = []
-                action_values = []
-                for action in range(0, self.action_count):
-                    try:
-                        q = library[policy]['Q'][state, action]
-                    except KeyError:
-                        q = 0.0
-                    Qs.append((action, q))
-                    action_values.append(q)
-                _logger.debug("%s: action_values = %s" %
-                              (str(policy), str(action_values)))
-                transformed_action_values = \
-                    self.transform_action_values(action_values)
-                _logger.debug("%s: transformed_action_values = %s" %
-                              (str(policy),
-                               str(transformed_action_values)))
-                action_probs = \
-                    self.get_action_probs(transformed_action_values,
-                                          tau)
-                _logger.debug("%s: action_probs = %s" %
-                              (str(policy), str(action_probs)))
-                weighted_action_probs = \
-                    [library[policy]['weight'] * i
-                     for i in action_probs]
-                _logger.debug("%s: weighted_action_probs = %s" %
-                              (str(policy),
-                               str(weighted_action_probs)))
-            else:
-                weighted_action_probs = \
-                    [0.0 for action in range(0, self.action_count)]
-                _logger.debug("%s: weighted_action_probs = %s" %
-                              (str(policy),
-                               str(weighted_action_probs)))
-            library_probs.append(weighted_action_probs)
-        _logger.debug("library_probs = %s" % str(library_probs))
-        probs = [sum(i) for i in zip(*library_probs)]
-        _logger.debug("***** final_probs = %s" % str(probs))
-        # select action using probabillities
-        if sum(probs) == 0.0:
+        if len(library) > 1:
+            library_probs = []
+            for policy in library:
+                if library[policy]['active']:
+                    Qs = []
+                    action_values = []
+                    for action in range(0, self.action_count):
+                        try:
+                            q = library[policy]['Q'][state, action]
+                        except KeyError:
+                            q = 0.0
+                        Qs.append((action, q))
+                        action_values.append(q)
+                    _logger.debug("%s: action_values = %s" %
+                                  (str(policy), str(action_values)))
+                    transformed_action_values = \
+                        self.transform_action_values(action_values)
+                    _logger.debug("%s: transformed_action_values = %s" %
+                                  (str(policy),
+                                   str(transformed_action_values)))
+                    action_probs = \
+                        self.get_action_probs(transformed_action_values,
+                                              tau)
+                    _logger.debug("%s: action_probs = %s" %
+                                  (str(policy), str(action_probs)))
+                    weighted_action_probs = \
+                        [library[policy]['weight'] * i
+                         for i in action_probs]
+                    _logger.debug("%s: weighted_action_probs = %s" %
+                                  (str(policy),
+                                   str(weighted_action_probs)))
+                else:
+                    weighted_action_probs = \
+                        [0.0 for action in range(0, self.action_count)]
+                    _logger.debug("%s: weighted_action_probs = %s" %
+                                  (str(policy),
+                                   str(weighted_action_probs)))
+                library_probs.append(weighted_action_probs)
+            _logger.debug("library_probs = %s" % str(library_probs))
+            probs = [sum(i) for i in zip(*library_probs)]
+            _logger.debug("***** final_probs = %s" % str(probs))
+            # select action using probabillities
+            if sum(probs) == 0.0:
+                return self.rng.randint(0, self.action_count)
+            action_pick = self.rng.uniform(0, 1)
+            _logger.debug("action_pick = %s" % str(action_pick))
+            for i in range(0, len(probs)):
+                lower = 0
+                if not i == 0:
+                    for j in range(0, i):
+                        lower += probs[j]
+                upper = lower + probs[i]
+                if lower <= action_pick <= upper:
+                    return i
+            # just for safety in case of rounding error in last step
             return self.rng.randint(0, self.action_count)
-        action_pick = self.rng.uniform(0, 1)
-        _logger.debug("action_pick = %s" % str(action_pick))
-        for i in range(0, len(probs)):
-            lower = 0
-            if not i == 0:
-                for j in range(0, i):
-                    lower += probs[j]
-            upper = lower + probs[i]
-            if lower <= action_pick <= upper:
-                return i
-        # just for safety in case of rounding error in last step
-        return self.rng.randint(0, self.action_count)
+        else:
+            _logger.debug("### Selecting action e-greedily "
+                          "(only one policy in library) ###")
+            return self.greedy(self.Q, state)
 
     def get_action_probs(self, action_values, tau):
         """ Calculate the softmax over the given action values.
