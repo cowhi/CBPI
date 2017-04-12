@@ -1,6 +1,8 @@
+# no temp files
+*~
+
 # log files and videos
 logs/
-TiRL/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
