@@ -216,9 +216,11 @@ def plot_task(path_to_dir):
         plt.plot(df['episode'], df[factor + '_mean'],
                  label=factor+'_mean', color=color, linewidth=2.0)
         plt.plot(df['episode'], df[factor + '_lower'],
-                 label=factor+'_lower', color=color, linewidth=1.0)
+                 label=factor+'_lower', color=color,
+                 alpha=0.2, linewidth=1.0)
         plt.plot(df['episode'], df[factor + '_upper'],
-                 label=factor+'_upper', color=color, linewidth=1.0)
+                 label=factor+'_upper', color=color,
+                 alpha=0.2, linewidth=1.0)
         plt.fill_between(df['episode'], df[factor + '_mean'],
                          df[factor + '_lower'],
                          facecolor=color, alpha=0.2)
@@ -305,9 +307,11 @@ def plot_policy_choice_summary(path_to_dir, kind='probs'):
         plt.plot(df['episode'], df['mean'],
                  label=policy_name, color=colors[color_count], linewidth=2.0)
         plt.plot(df['episode'], df['lower'],
-                 label='_nolegend_', color=colors[color_count], linewidth=1.0)
+                 label='_nolegend_', color=colors[color_count],
+                 alpha=0.2, linewidth=1.0)
         plt.plot(df['episode'], df['upper'],
-                 label='_nolegend_', color=colors[color_count], linewidth=1.0)
+                 label='_nolegend_', color=colors[color_count],
+                 alpha=0.2, linewidth=1.0)
         plt.fill_between(df['episode'], df['mean'],
                          df['lower'],
                          facecolor=colors[color_count], alpha=0.2)

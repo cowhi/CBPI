@@ -1,0 +1,2 @@
+task,run,episode,steps_total,steps_mean,reward_total,reward_mean,epsilon,step_count
+omega4,1.0,1406.0,244.0,24.4,10.0,1.0,0.297,103153.0

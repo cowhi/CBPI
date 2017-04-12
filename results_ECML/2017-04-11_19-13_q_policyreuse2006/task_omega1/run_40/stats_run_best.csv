@@ -1,0 +1,2 @@
+run,episode,steps_total,steps_mean,reward_total,reward_mean,epsilon,step_count
+40,611.0,208.0,20.8,10.0,1.0,0.6945,51993.0
