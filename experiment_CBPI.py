@@ -6,6 +6,7 @@ import collections
 import difflib
 from experiment import Experiment
 from learner_CBPI import LearnerCBPI
+# from learner_Q import LearnerQ
 import helper
 import numpy as np
 import logging
@@ -100,8 +101,21 @@ class ExperimentCBPI(Experiment):
                      (str(self.current_task['name']), str(self.task_policies)))
 
     def _init_task(self):
+        # self.learner = LearnerCBPI(action_count=len(self.env.actions),
+        #                           epsilon=self.params['epsilon'],
+        #                           gamma=self.params['gamma'],
+        #                           alpha=self.params['alpha'],
+        #                           rng=self.rng)
+        # self.learner.init_Q(states=self.env.get_all_states(), how='zero')
         self.init_library()
         self.build_policy_library()
+        # TODO: change learner if only one policy in library
+        # if len(self.current_library) == 1:
+        #    self.learner = LearnerQ(action_count=len(self.env.actions),
+        #                            epsilon=self.params['epsilon'],
+        #                            gamma=self.params['gamma'],
+        #                            alpha=self.params['alpha'],
+        #                            rng=self.rng)
 
     def _cleanup_task(self):
         helper.summarize_runs_policy_choice(self.task_dir, 'probs')
@@ -230,11 +244,14 @@ class ExperimentCBPI(Experiment):
         """ Returns the action_id following a policy from the current
             library from a given state.
         """
-        return self.learner.get_action(state,
-                                       self.current_library,
-                                       policy_name,
-                                       self.status,
-                                       self.params['tau_action'])
+        # if len(self.current_library) == 1:
+        #    return self.learner.get_action_id(state)
+        # else:
+        return self.learner.get_action_id(state,
+                                          self.current_library,
+                                          policy_name,
+                                          self.status,
+                                          self.params['tau_action'])
 
     def get_policy_weight(self, policy_results_mean):
         """ Returns the weight for the used policy.
@@ -272,11 +289,12 @@ class ExperimentCBPI(Experiment):
                 tuple(self.library[self.current_task['name']]['goal_pos']))
             # 2) get actions for each policy in each random state
             for policy_name in self.current_library:
-                action_id = self.learner.get_action(random_state,
-                                                    self.current_library,
-                                                    policy_name,
-                                                    self.status,
-                                                    self.params['tau_action'])
+                action_id = self.learner.get_action_id(
+                    random_state,
+                    self.current_library,
+                    policy_name,
+                    self.status,
+                    self.params['tau_action'])
                 eval_lib[policy_name].append(action_id)
                 # TODO: count to total steps
         # 3) compare parity with current_library

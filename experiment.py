@@ -93,9 +93,9 @@ class Experiment(object):
 
     def set_status(self, status):
         self.status = status
-        _logger.info("[T:%s,R:%s,E:%s] %s" %
-                     (str(self.current_task['name']), str(self.current_run),
-                      str(self.current_episode), str(self.status)))
+        _logger.debug("[T:%s,R:%s,E:%s] %s" %
+                      (str(self.current_task['name']), str(self.current_run),
+                       str(self.current_episode), str(self.status)))
 
     def init_episode(self):
         self.steps_in_episode = 0
@@ -171,6 +171,9 @@ class Experiment(object):
     # def evaluate_current_lib rary(self):
     #    pass
 
+    def get_action_id(self, state, policy_name):
+        return self._get_action_id(state, policy_name)
+
     @abc.abstractmethod
     def _get_action_id(self):
         pass
@@ -236,7 +239,7 @@ class Experiment(object):
             self.env.draw_frame()
             self.env.save_current_frame(self.episode_dir)
         state = self.env.get_current_state(self.agent_name)
-        action_id = self._get_action_id(state, policy_name)
+        action_id = self.get_action_id(state, policy_name)
         reward = self.env.step(self.env.actions[action_id],
                                self.agent_name)
         state_prime = self.env.get_current_state(self.agent_name)
@@ -253,7 +256,7 @@ class Experiment(object):
         self._specific_updates(policy_name)
         while not self.env.episode_ended:
             state = state_prime
-            action_id = self._get_action_id(state, policy_name)
+            action_id = self.get_action_id(state, policy_name)
             reward = self.env.step(self.env.actions[action_id],
                                    self.agent_name)
             state_prime = self.env.get_current_state(self.agent_name)

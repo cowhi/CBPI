@@ -22,9 +22,7 @@ class ExperimentPLPR(Experiment):
     """
 
     def __init__(self, params_file):
-        """ Initializes an experiment.
-
-        """
+        """ Initializes an experiment. """
         super(ExperimentPLPR, self).__init__(params_file)
         self.learner = LearnerPLPR(action_count=len(self.env.actions),
                                    epsilon=self.params['epsilon'],
@@ -210,12 +208,12 @@ class ExperimentPLPR(Experiment):
         """ Returns the action_id following a policy from the current
             library from a given state.
         """
-        return self.learner.get_action(state,
-                                       self.library,
-                                       policy_name,
-                                       self.current_task['name'],
-                                       self.status,
-                                       self.psi)
+        return self.learner.get_action_id(state,
+                                          self.library,
+                                          policy_name,
+                                          self.current_task['name'],
+                                          self.status,
+                                          self.psi)
 
     def update_library(self):
         self.set_status('library_eval')

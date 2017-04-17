@@ -16,8 +16,9 @@ class LearnerPLPR(LearnerQ):
                                           source, rng)
         # self.random_test = True
 
-    def get_action(self, state, library=None, policy_name=None, task_name=None,
-                   status='training', psi=0.0):
+    def get_action_id(self, state, library=None, policy_name=None,
+                      task_name=None,
+                      status='training', psi=0.0):
         # if self.random_test:
         #    return self.rng.randint(0, self.action_count)
         """ Get an action according to current policy during testing and when
@@ -34,15 +35,15 @@ class LearnerPLPR(LearnerQ):
                           (str(policy_name), str(reuse_probability), str(psi)))
             return self.greedy(library[policy_name]['Q'], state)
         else:
-            explore_propability = self.rng.uniform(0, 1)
+            explore_probability = self.rng.uniform(0, 1)
             # epsilon = 1.0 - psi
-            if explore_propability < self.epsilon:
+            if explore_probability < self.epsilon:
                 _logger.debug("### Random action (%s < %s) ###" %
-                              (str(explore_propability), str(self.epsilon)))
+                              (str(explore_probability), str(self.epsilon)))
                 return self.rng.randint(0, self.action_count)
             else:
                 _logger.debug("### Selecting policy %s e-greedily "
                               "(%s > %s) ###" % (str(task_name),
-                                                 str(explore_propability),
+                                                 str(explore_probability),
                                                  str(self.epsilon)))
                 return self.greedy(self.Q, state)

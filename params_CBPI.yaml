@@ -72,6 +72,8 @@ tasks:
       goal_pos: [14, 1]
     - name: omega6
       goal_pos: [2, 2]
+    - name: omega7
+      goal_pos: [20, 2]
     - name: omega8
       goal_pos: [21, 6]
     - name: omega9
@@ -158,8 +160,6 @@ tasks:
       goal_pos: [14, 12]
     - name: omega50
       goal_pos: [2, 8]
-    - name: omega7
-      goal_pos: [20, 2]
 # will we use pretrained policies
 load_policies: False
 # where are those policies

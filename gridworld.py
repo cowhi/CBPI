@@ -10,6 +10,7 @@ import os
 import cv2
 import glob
 import numpy as np
+import collections
 
 # some color constants for PIL
 white = (255, 255, 255)  # room
@@ -36,8 +37,8 @@ class Gridworld(object):
         self.row_count = len(self.lines)
         self.column_count = len(self.lines[0])
         # Initialize objects and possible states
-        self.agents = {}
-        self.goals = {}
+        self.agents = collections.OrderedDict()
+        self.goals = collections.OrderedDict()
         self.all_states = self.lookup_states()
         # set possible actions
         self.actions = ['west',  # 0: left
@@ -101,21 +102,38 @@ class Gridworld(object):
         for agent_coords in self.agents.values():
             x1 = int(agent_coords[0]) * self.cell_width
             y1 = int(agent_coords[1]) * self.cell_height
-            x2 = x1 + self.cell_width
-            y2 = y1 + self.cell_height
+            x2 = x1 + self.cell_width - 1
+            y2 = y1 + self.cell_height - 1
             # self.image.ellipse([x1, y1, x2, y2], blue_light)
             self.image.ellipse([x1, y1, x2, y2], white)
 
     def draw_goals(self):
+        # plpr_goals = [6, 27, 5, 47, 28, 29, 4, 33, 37, 11, 26, 30, 31, 23]
+        # cbpi_goals = [2, 46, 31, 30, 3, 44, 4, 9, 8, 1, 14, 23, 17, 19]
+        # goal = 0
         for goal_coords, goal_values in self.goals.items():
+            # goal += 1
             x1 = goal_coords[0] * self.cell_width
             y1 = goal_coords[1] * self.cell_height
-            x2 = x1 + self.cell_width
-            y2 = y1 + self.cell_height
+            x2 = x1 + self.cell_width - 1
+            y2 = y1 + self.cell_height - 1
+            # if goal_values[0] < 0 or goals == 0:
+            # if goal in cbpi_goals:
             if goal_values[0] < 0:
                 self.image.rectangle([x1, y1, x2, y2], red)
             else:
                 self.image.rectangle([x1, y1, x2, y2], green_light)
+                """
+                # This is only for presentation needs
+                if goal < 10:
+                    self.image.text((x1 + 2, y1),
+                                    str(goal),
+                                    black)
+                else:
+                    self.image.text((x1 - 1, y1),
+                                    str(goal),
+                                    black)
+                """
 
     """
         Funktions to control the environment.
@@ -134,7 +152,8 @@ class Gridworld(object):
         return possible_states
 
     def add_goal(self, pos, name='goal', reward=1.0):
-        self.goals[pos] = (reward, name)
+        # self.goals[pos] = (reward, name)
+        self.goals.update({pos: (reward, name)})
 
     def add_agent(self, pos, name='agent'):
         self.agents[name] = [pos[0], pos[1]]
@@ -185,67 +204,67 @@ class Gridworld(object):
         self.step_count = 0
         self.episode_ended = False
         self.goal_reached = False
-        self.goals = {}
-        self.agents = {}
+        self.agents = collections.OrderedDict()
+        self.goals = collections.OrderedDict()
         self.reached_goal_name = None
         self.reward_current = 0
         self.reward_total = 0
 
-    def step(self, action, agent='agent'):
+    def step(self, action, agent_name='agent'):
         """
             Simply updates the coordinates of the agent for the
             respective action if the proposed direction does not lead
             into a wall.
         """
+        agent = self.agents[agent_name]
         self.step_count += 1
         step = self.step_size + self.get_slip()
         can_move = True
         if action == 'west':
-            for x in range(int(self.agents[agent][0] - step),
-                           int(self.agents[agent][0]) + 1):
+            for x in range(int(agent[0] - step), int(agent[0]) + 1):
+                # TODO: check what is faster
+                if 0 <= agent[1] < len(self.lines):
+                    if self.lines[int(agent[1])][x] == '-':
+                        can_move = False
+                else:
+                    can_move = False
+            if can_move:
+                agent[0] -= step
+        elif action == 'east':
+            for x in range(int(agent[0]), int(agent[0] + step) + 1):
                 try:
-                    if self.lines[int(self.agents[agent][1])][x] == '-':
+                    if self.lines[int(agent[1])][x] == '-':
                         can_move = False
                 except IndexError:
                     can_move = False
             if can_move:
-                self.agents[agent][0] -= step
-        if action == 'east':
-            for x in range(int(self.agents[agent][0]),
-                           int(self.agents[agent][0] + step) + 1):
+                agent[0] += step
+        elif action == 'north':
+            for y in range(int(agent[1] - step), int(agent[1]) + 1):
                 try:
-                    if self.lines[int(self.agents[agent][1])][x] == '-':
+                    if self.lines[y][int(agent[0])] == '-':
                         can_move = False
                 except IndexError:
                     can_move = False
             if can_move:
-                self.agents[agent][0] += step
-        if action == 'north':
-            for y in range(int(self.agents[agent][1] - step),
-                           int(self.agents[agent][1]) + 1):
+                agent[1] -= step
+        elif action == 'south':
+            for y in range(int(agent[1]), int(agent[1] + step) + 1):
                 try:
-                    if self.lines[y][int(self.agents[agent][0])] == '-':
+                    if self.lines[y][int(agent[0])] == '-':
                         can_move = False
                 except IndexError:
                     can_move = False
             if can_move:
-                self.agents[agent][1] -= step
-        if action == 'south':
-            for y in range(int(self.agents[agent][1]),
-                           int(self.agents[agent][1] + step) + 1):
-                try:
-                    if self.lines[y][int(self.agents[agent][0])] == '-':
-                        can_move = False
-                except IndexError:
-                    can_move = False
-            if can_move:
-                self.agents[agent][1] += step
+                agent[1] += step
+        else:
+            raise Exception('Unknown action: %s' % str(action))
         self.reward_current = self.get_reward_current()
         self.reward_total += self.reward_current
         return self.reward_current
 
     def get_slip(self):
-        return self.rng.uniform(-1 * self.step_uncertainty,
+        return self.rng.uniform(-self.step_uncertainty,
                                 self.step_uncertainty)
 
     def get_reward_current(self):
