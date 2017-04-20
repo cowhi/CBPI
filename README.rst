@@ -21,7 +21,10 @@ Description
 ============
 
 This is the accompanying code for the paper **Case-based Policy Inference
-for Transfer in Reinforcement Learning** submitted to ECML 2017
+for Transfer in Reinforcement Learning** submitted to ECML 2017.
+
+Also accepted as a short paper **Case-based Policy Inference** at the TiRL 
+workshop at AAMAS 2017.
 
 Run an experiment
 --------------------------
@@ -35,4 +38,4 @@ Just download the repository, check the experiment settings in
 
 A log-folder will be created and the whole experiment is documented and the
 graphs are created. If you choose visual, you also get a video of the testing
-episodes (needs much space). 
+episodes (needs much space).
