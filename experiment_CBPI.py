@@ -133,20 +133,10 @@ class ExperimentCBPI(Experiment):
             self.evaluate_current_library()
             self.importance_limit += \
                 self.params['policy_importance_limit_delta']
-        if self.status == 'training':
-            if self.learner.epsilon > -1 * self.learner.epsilon_change:
-                self.learner.set_epsilon(self.learner.epsilon +
-                                         self.learner.epsilon_change)
 
     def _init_run(self):
         self.learner.init_Q(states=self.env.get_all_states(),
                             how='zero')
-        if len(self.current_library) > 1:
-            self.learner.set_epsilon(0.2)
-            self.learner.set_epsilon(0.2)
-        else:
-            self.learner.set_epsilon(self.params['epsilon'])
-            self.learner.set_epsilon(self.params['epsilon'])
         self.run_lib_probs_file = os.path.join(self.run_dir,
                                                'stats_policy_probs.csv')
         self.run_lib_absolute_file = os.path.join(self.run_dir,
@@ -162,6 +152,18 @@ class ExperimentCBPI(Experiment):
         for policy_name in self.current_library:
             self.current_library[policy_name]['active'] = True
         self.active_policies = len(self.task_policies)
+        epsilon = (self.params['epsilon'] *
+                   ((1 + self.params['task_library_size'] -
+                     len(self.current_library)) /
+                    self.params['task_library_size']))
+        self.learner.set_epsilon(epsilon)
+        self.learner.set_epsilon(epsilon)
+        # if len(self.current_library) > 1:
+        #    self.learner.set_epsilon(epsilon)
+        #    self.learner.set_epsilon(epsilon)
+        # else:
+        # self.learner.set_epsilon(self.params['epsilon'])
+        # self.learner.set_epsilon(self.params['epsilon'])
         self.evaluate_current_library()
 
     def _cleanup_run(self):
@@ -297,6 +299,7 @@ class ExperimentCBPI(Experiment):
                     self.params['tau_action'])
                 eval_lib[policy_name].append(action_id)
                 # TODO: count to total steps
+                self.exp_steps += 1
         # 3) compare parity with current_library
         similarities = []
         for policy_name in self.current_library:

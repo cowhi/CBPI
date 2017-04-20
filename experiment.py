@@ -49,6 +49,7 @@ class Experiment(object):
         self.current_task = 'None'
         self.current_run = 0
         self.current_episode = 0
+        self.exp_steps = 0
 
     def get_parameter(self, file_name):
         path_to_file = os.path.join(os.getcwd(), file_name)
@@ -108,6 +109,10 @@ class Experiment(object):
 
     def cleanup_episode(self):
         self._cleanup_episode()
+        if self.status == 'training':
+            if self.learner.epsilon > self.params['epsilon_limit']:
+                self.learner.set_epsilon(self.learner.epsilon +
+                                         self.learner.epsilon_change)
 
     @abc.abstractmethod
     def _cleanup_episode(self):

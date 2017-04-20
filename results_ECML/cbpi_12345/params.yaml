@@ -68,9 +68,9 @@ tasks:
 load_policies: True
 # where are those policies
 learned_policies:
-    #- name: omega1
-    #  goal_pos: [15, 2]
-    #  directory: /Users/rubenglatt/playground/CBPI/results_ECML/2017-04-11_19-13_q_policyreuse2006/task_omega1/
+    - name: omega1
+      goal_pos: [15, 2]
+      directory: /Users/rubenglatt/playground/CBPI/results_ECML/2017-04-11_19-13_q_policyreuse2006/task_omega1/
     - name: omega2
       goal_pos: [3, 2]
       directory: /Users/rubenglatt/playground/CBPI/results_ECML/2017-04-11_19-13_q_policyreuse2006/task_omega2/
@@ -80,9 +80,9 @@ learned_policies:
     - name: omega4
       goal_pos: [20, 18]
       directory: /Users/rubenglatt/playground/CBPI/results_ECML/2017-04-11_19-13_q_policyreuse2006/task_omega4/
-    #- name: omega5
-    #  goal_pos: [20, 2]
-    #  directory: /Users/rubenglatt/playground/CBPI/results_ECML/2017-04-11_19-13_q_policyreuse2006/task_omega5/
+    - name: omega5
+      goal_pos: [20, 2]
+      directory: /Users/rubenglatt/playground/CBPI/results_ECML/2017-04-11_19-13_q_policyreuse2006/task_omega5/
 ############################
 ### Environment Settings ###
 ############################

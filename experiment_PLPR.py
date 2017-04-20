@@ -131,9 +131,9 @@ class ExperimentPLPR(Experiment):
 
     def _cleanup_episode(self):
         if self.status == 'training':
-            if self.learner.epsilon > -1 * self.learner.epsilon_change:
-                self.learner.set_epsilon(self.learner.epsilon +
-                                         self.learner.epsilon_change)
+            # if self.learner.epsilon > -1 * self.learner.epsilon_change:
+            #    self.learner.set_epsilon(self.learner.epsilon +
+            #                             self.learner.epsilon_change)
             self.current_W = \
                 ((self.params['gamma'] ** self.steps_in_episode) *
                  self.reward_in_episode)

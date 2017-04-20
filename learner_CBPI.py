@@ -22,7 +22,7 @@ class LearnerCBPI(LearnerQ):
             # return self.greedy(library[eval_policy]['Q'], state)
             return self.greedy(self.Q, state)
         if status in ['library_eval']:
-            return self.greedy(library[eval_policy]['Q'], state)
+            return self.greedy(library[eval_policy]['Q'], state, status)
         if status in ['policy_eval']:
             doubt = self.rng.uniform(0, 1)
             if library[eval_policy]['confidence'] > doubt:

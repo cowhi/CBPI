@@ -93,11 +93,14 @@ class LearnerQ(object):
                                              str(self.epsilon)))
             return self.greedy(self.Q, state)
 
-    def greedy(self, policy_Qs, state):
+    def greedy(self, policy_Qs, state, status='training'):
         """ Follows a greedy strategy selcting always the action with
             the highest Q-value. """
         Qs = [(action, policy_Qs[state, action])
               for action in range(self.action_count)]
+        if status in ['library_eval']:
+            if len(set(Qs)) == 1:
+                return 0
         _logger.debug("Q-values in %s: %s" %
                       (str(state), str(Qs)))
         sorted_Qs = sorted(Qs, key=operator.itemgetter(1),

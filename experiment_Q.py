@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 # import numpy as np
-import cProfile
+# import cProfile
 from experiment import Experiment
 from learner_Q import LearnerQ
 # import helper
@@ -50,9 +50,10 @@ class ExperimentQ(Experiment):
         pass
 
     def _cleanup_episode(self, *args):
-        if self.learner.epsilon > -1 * self.learner.epsilon_change:
-            self.learner.set_epsilon(self.learner.epsilon +
-                                     self.learner.epsilon_change)
+        # if self.learner.epsilon > -1 * self.learner.epsilon_change:
+        #    self.learner.set_epsilon(self.learner.epsilon +
+        #                             self.learner.epsilon_change)
+        pass
 
     def _get_action_id(self, state, *args):
         """ Returns the action_id following a policy from the current
@@ -70,5 +71,5 @@ if __name__ == "__main__":
     params_file = os.path.join(os.getcwd(),
                                'params_Q.yaml')
     exp = ExperimentQ(params_file)
-    # exp.main()
-    cProfile.run('exp.main()')
+    exp.main()
+    # cProfile.run('exp.main()')
