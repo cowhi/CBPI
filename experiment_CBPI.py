@@ -369,6 +369,6 @@ class ExperimentCBPI(Experiment):
 
 if __name__ == "__main__":
     params_file = os.path.join(os.getcwd(),
-                               'params_CBPI_short.yaml')
+                               'params_CBPI.yaml')
     exp = ExperimentCBPI(params_file)
     exp.main()

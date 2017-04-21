@@ -22,7 +22,7 @@ policy_eval_interval: 40
 # Number of tests to evaluate policy (100)
 policy_eval_episodes: 1
 # Factor to determine similarity (closeness) as percentage of map diagonal
-policy_eval_factor: 0.3
+policy_eval_factor: 0.2
 # Starting confidence in eval policy
 policy_eval_confidence: 1.0
 # Loss of confidence per step to explore more towards end of evaluation

@@ -109,8 +109,8 @@ class Gridworld(object):
 
     def draw_goals(self):
         # plpr_goals = [6, 27, 5, 47, 28, 29, 4, 33, 37, 11, 26, 30, 31, 23]
-        # cbpi_goals = [1, 2, 3, 4, 8, 9, 10, 11, 15,
-        #              16, 17, 19, 20, 24, 27, 37, 46]
+        # cbpi_goals = [1, 2, 3, 4, 9, 10, 14, 15,
+        #              16, 17, 18, 19, 24, 31, 34, 48]
         # goal = 0
         for goal_coords, goal_values in self.goals.items():
             # goal += 1

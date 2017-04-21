@@ -10,7 +10,7 @@ Case-based Policy Inference (CBPI)
 .. _License: https://github.com/cowhi/CBPI/blob/master/LICENSE.txt
 
 
-.. image:: https://github.com/cowhi/CBPI/blob/master/results_ecml/cbr_rl.png
+.. image:: https://github.com/cowhi/CBPI/raw/master/results_ECML/cbr_rl.png
   :alt: Experiment setup
   :width: 740
   :height: 435
@@ -23,7 +23,7 @@ Description
 This is the accompanying code for the paper **Case-based Policy Inference
 for Transfer in Reinforcement Learning** submitted to ECML 2017.
 
-Also accepted as a short paper **Case-based Policy Inference** at the TiRL 
+Also accepted as a short paper **Case-based Policy Inference** at the TiRL
 workshop at AAMAS 2017.
 
 Run an experiment
