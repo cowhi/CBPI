@@ -12,8 +12,8 @@ Case-based Policy Inference (CBPI) for Transfer in Reinforcement Learning
 
 .. image:: https://github.com/cowhi/CBPI/raw/master/results_ECML/cbr_rl.png
   :alt: Experiment setup
-  :width: 740
-  :height: 435
+  :width: 654
+  :height: 400
   :align: center
 
 
