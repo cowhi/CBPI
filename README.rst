@@ -1,10 +1,10 @@
 .. -*- mode: rst -*-
 
 =========
-Case-based Policy Inference (CBPI)
+Case-based Policy Inference (CBPI) for Transfer in Reinforcement Learning
 =========
 
-|License|_ |Docs|_
+|License|_
 
 .. |License| image:: https://img.shields.io/badge/license-MIT-blue.svg
 .. _License: https://github.com/cowhi/CBPI/blob/master/LICENSE.txt
